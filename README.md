@@ -156,9 +156,9 @@ own server.
 
 ### One-click sign-in
 
-No OAuth client id ships in this repository. Every connector works with credentials you paste in
-(its Manual tab); one-click sign-in is offered once you put the id of an app you registered into
-`.env` in the state folder (`%APPDATA%\Reeve\.env` on Windows, `~/.config/Reeve/.env` elsewhere):
+No connector's OAuth client id ships in this repository. Every connector works with credentials
+you paste in (its Manual tab); one-click sign-in is offered once you put the id of an app you
+registered into `.env` in the state folder (`%APPDATA%\Reeve\.env` on Windows, `~/.config/Reeve/.env` elsewhere):
 
 ```shell
 GITHUB_OAUTH_CLIENT_ID=...       # a GitHub OAuth App with device flow enabled
@@ -166,11 +166,10 @@ REEVE_MICROSOFT_CLIENT_ID=...    # an Entra app: any directory + personal accoun
 REEVE_TRELLO_API_KEY=...         # a Trello Power-Up's API key
 GOOGLE_OAUTH_CLIENT_ID=...       # a Google Desktop-app client, with GOOGLE_OAUTH_CLIENT_SECRET
 GMAIL_OAUTH_CLIENT_ID=...        # Gmail's own client, with GMAIL_OAUTH_CLIENT_SECRET
-REEVE_CLAUDE_CLIENT_ID=...       # signing in with a Claude plan instead of an API key
-REEVE_CODEX_CLIENT_ID=...        # signing in with a ChatGPT plan instead of an API key
 ```
 
 The process environment wins over the file. A card with no id set offers only its manual way.
+Signing in with a Claude or ChatGPT plan needs none of this: it uses the vendor's own public sign-in.
 
 Checks: `.venv/bin/pytest` for the server, `npm test` and `npm run e2e` in `surfaces/gui` for the
 UI (unit tests and the end-to-end suite against a mocked server). Installers come from

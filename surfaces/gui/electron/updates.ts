@@ -34,9 +34,23 @@ function newer(version: string): boolean {
   return false;
 }
 
-/** A newer release, or null when up to date, when the channel cannot be reached, or in a dev run. */
+/** A build of the private repository says so in its package.json (`reeveChannel: "private"`, set
+ *  by packaging/build_windows.ps1 when the connectors' client ids are in the tree). It never
+ *  updates: every release on the feed is a public build, and installing one would take those ids
+ *  away. */
+function privateBuild(): boolean {
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(app.getAppPath(), "package.json"), "utf8"));
+    return pkg.reeveChannel === "private";
+  } catch {
+    return false;
+  }
+}
+
+/** A newer release, or null when up to date, when the channel cannot be reached, in a dev run, or
+ *  in a private build. */
 export async function checkForUpdate(): Promise<{ version: string; notes: string } | null> {
-  if (!app.isPackaged) return null;
+  if (!app.isPackaged || privateBuild()) return null;
   try {
     const result = await updater().checkForUpdates();
     const info = result?.updateInfo;

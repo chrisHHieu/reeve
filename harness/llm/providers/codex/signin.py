@@ -18,7 +18,7 @@ from .constants import (
     AUTHORIZE_URL,
     CALLBACK_PATH,
     CALLBACK_PORT,
-    client_id,
+    CLIENT_ID,
     FLOW_TIMEOUT_SECONDS,
     ORIGINATOR,
     PORT_BUSY_ERROR,
@@ -50,7 +50,7 @@ def create_pkce() -> tuple[str, str]:
 def build_authorize_url(state: str, challenge: str) -> str:
     params = {
         "response_type": "code",
-        "client_id": client_id(),
+        "client_id": CLIENT_ID,
         "redirect_uri": REDIRECT_URI,
         "scope": SCOPE,
         "state": state,

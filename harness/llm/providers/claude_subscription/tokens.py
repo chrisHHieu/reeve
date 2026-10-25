@@ -13,7 +13,7 @@ import time
 from typing import Any, Optional
 
 from .constants import (
-    client_id,
+    CLIENT_ID,
     EXPIRED_ERROR,
     PROFILE,
     REDIRECT_URI,
@@ -77,7 +77,7 @@ def exchange_code(
 
     payload: dict[str, Any] = {
         "grant_type": "authorization_code",
-        "client_id": client_id(),
+        "client_id": CLIENT_ID,
         "code": clean_code,
         "state": effective_state,
         "redirect_uri": REDIRECT_URI,
@@ -184,13 +184,12 @@ class AnthropicSubscriptionTokenStore:
             self.clear()
             raise AnthropicSubscriptionSignInRequired(EXPIRED_ERROR)
 
-        client = client_id()
         try:
             response = _token_post(
                 {
                     "grant_type": "refresh_token",
                     "refresh_token": refresh_val,
-                    "client_id": client,
+                    "client_id": CLIENT_ID,
                 }
             )
         except Exception as exc:

@@ -40,6 +40,13 @@ def _own_state_folder(tmp_path, monkeypatch):
 
 
 @pytest.fixture(autouse=True)
+def _no_builtin_clients(monkeypatch, tmp_path):
+    """The private repository carries the connectors' client ids and the public one does not; the
+    suite runs as the public tree does, so one click is offered only where a test sets an id."""
+    monkeypatch.setattr("harness.safety.secrets.store.BUILTIN_CLIENTS", tmp_path / "no-client-ids.json")
+
+
+@pytest.fixture(autouse=True)
 def _no_compat_skills(monkeypatch, tmp_path):
     """P1-2 compat roots read `~/.agents`, `~/.claude`, `~/.config/opencode`. Tests must
     never discover the developer's real machine skills — point the home anchor at an empty

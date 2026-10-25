@@ -44,13 +44,20 @@ def load_dotenv(path: Path) -> dict[str, str]:
     return values
 
 
+#: The connectors' client ids the private repository carries, keyed by their setting's name. The
+#: public export leaves this file out (`PRIVATE` in `scripts/export_public.py`), so a public clone
+#: has none and its operator sets them in `.env`.
+BUILTIN_CLIENTS = Path(__file__).with_name("client_ids.json")
+
+
 def client_env(key: str) -> str:
     """An OAuth client id or secret the operator supplied, or "" if there is none.
 
     The process environment is read first, then the state folder's `.env`, the same file `${VAR}`
-    references resolve against. No client id or secret ships in the source tree: a value committed
-    there is in every clone and every scan of it, so a one-click sign-in works where its operator
-    put one here, and the manual path works everywhere else.
+    references resolve against, then `BUILTIN_CLIENTS` where this tree has it. The public tree
+    has no client id or secret: a value committed there is in every clone and every scan of it,
+    so a one-click sign-in works where its operator put one, and the manual path works everywhere
+    else.
     """
     if not key:
         return ""
@@ -58,9 +65,17 @@ def client_env(key: str) -> str:
     if live:
         return live
     try:
-        return (load_dotenv(state_dir() / ".env").get(key, "") or "").strip()
+        found = (load_dotenv(state_dir() / ".env").get(key, "") or "").strip()
     except Exception:
+        found = ""
+    if found:
+        return found
+    try:
+        builtin = json.loads(BUILTIN_CLIENTS.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
         return ""
+    value = builtin.get(key, "") if isinstance(builtin, dict) else ""
+    return value.strip() if isinstance(value, str) else ""
 
 
 class SecretStore:

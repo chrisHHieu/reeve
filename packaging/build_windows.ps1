@@ -173,7 +173,15 @@ function Build-Installer {
         Assert-Exit "the app build failed"
         & npm run electron:build
         Assert-Exit "the shell build failed"
-        & npx electron-builder --win nsis --publish never
+        # A tree that carries the connectors' client ids is the private repository's: its build is
+        # named apart and never updates from the public feed, which would install a build without
+        # them. A public clone has no such file.
+        $builder = @("--win", "nsis", "--publish", "never")
+        if (Test-Path (Join-Path $Platform "harness\safety\secrets\client_ids.json")) {
+            Write-Host "    private build: the connectors' client ids are in, updates are off"
+            $builder += @("-c.extraMetadata.reeveChannel=private", '-c.nsis.artifactName=Reeve-Setup-${version}-private.${ext}')
+        }
+        & npx electron-builder @builder
         Assert-Exit "electron-builder failed"
     }
     finally {

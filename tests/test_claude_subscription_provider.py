@@ -8,7 +8,7 @@ from harness.llm.providers.claude_subscription import (
 )
 from harness.llm.providers.claude_subscription.constants import (
     CALLBACK_PORT,
-    CLIENT_ID_ENV,
+    CLIENT_ID,
     REDIRECT_URI,
     TOKEN_URL,
     AnthropicSubscriptionAuthError,
@@ -31,21 +31,6 @@ from harness.llm.providers.registry import (
     get_descriptor,
 )
 from harness.llm.providers.matrix import models_for_provider
-
-
-CLIENT = "00000000-aaaa-bbbb-cccc-000000000000"
-
-
-@pytest.fixture(autouse=True)
-def _client_id(monkeypatch):
-    """No client id ships in the source; these tests run as an operator who set one."""
-    monkeypatch.setenv(CLIENT_ID_ENV, CLIENT)
-
-
-def test_without_a_client_id_the_sign_in_says_what_to_set(monkeypatch):
-    monkeypatch.delenv(CLIENT_ID_ENV)
-    with pytest.raises(AnthropicSubscriptionAuthError, match=CLIENT_ID_ENV):
-        build_authorize_url("s", "c")
 
 
 class MemorySecretStore:
@@ -72,7 +57,7 @@ def test_pkce_challenge_shape():
 def test_authorize_url_parameters():
     url = build_authorize_url("test_state", "test_challenge")
     assert "https://claude.ai/oauth/authorize" in url
-    assert f"client_id={CLIENT}" in url
+    assert f"client_id={CLIENT_ID}" in url
     assert "redirect_uri=" in url
     assert "code_challenge=test_challenge" in url
     assert "code_challenge_method=S256" in url

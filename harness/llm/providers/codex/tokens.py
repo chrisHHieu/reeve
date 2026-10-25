@@ -14,7 +14,7 @@ from typing import Any, Optional
 
 from .constants import (
     ACCOUNT_CLAIM,
-    client_id,
+    CLIENT_ID,
     EXPIRED_ERROR,
     ORIGINATOR,
     PROFILE,
@@ -73,7 +73,7 @@ def exchange_code(code: str, verifier: str, timeout: float = 30.0) -> dict[str, 
             "grant_type": "authorization_code",
             "code": code,
             "redirect_uri": REDIRECT_URI,
-            "client_id": client_id(),
+            "client_id": CLIENT_ID,
             "code_verifier": verifier,
         },
         timeout,
@@ -145,10 +145,9 @@ class CodexTokenStore:
         if not refresh:
             self.clear()
             raise CodexSignInRequired(EXPIRED_ERROR)
-        client = client_id()
         try:
             response = _token_post(
-                {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": client}
+                {"grant_type": "refresh_token", "refresh_token": refresh, "client_id": CLIENT_ID}
             )
         except Exception as exc:
             raise CodexAuthError(

@@ -10,12 +10,12 @@ from __future__ import annotations
 AUTH_ISSUER = "https://auth.openai.com"
 AUTHORIZE_URL = AUTH_ISSUER + "/oauth/authorize"
 TOKEN_URL = AUTH_ISSUER + "/oauth/token"
-#: Where the subscription flow's public client id is read, in the environment or the state
-#: folder's `.env`. None ships in the source tree, the way the connectors' one-click ids do not.
-CLIENT_ID_ENV = "REEVE_CODEX_CLIENT_ID"
+#: The public client id of the subscription flow. It ships in the vendor's own tooling and is
+#: not a secret.
+CLIENT_ID = "app_EMoamEEZ73f0CkXaXp7hrann"
 CALLBACK_PORT = 1455
 CALLBACK_PATH = "/auth/callback"
-#: Registered for that client id exactly as written; host and port are not ours to choose.
+#: Registered for `CLIENT_ID` exactly as written; host and port are not ours to choose.
 REDIRECT_URI = f"http://localhost:{CALLBACK_PORT}{CALLBACK_PATH}"
 SCOPE = "openid profile email offline_access"
 ORIGINATOR = "reeve"
@@ -44,11 +44,6 @@ PORT_BUSY_ERROR = (
     "holder. Quit it and start the sign-in again."
 )
 
-NO_CLIENT_ERROR = (
-    f"ChatGPT sign-in needs an OAuth client id: set {CLIENT_ID_ENV} in Reeve's .env, or use an "
-    "OpenAI API key."
-)
-
 
 class CodexAuthError(RuntimeError):
     """A subscription-auth failure with a message the person can read."""
@@ -56,13 +51,3 @@ class CodexAuthError(RuntimeError):
 
 class CodexSignInRequired(CodexAuthError):
     """No usable tokens. The fix is an explicit sign-in, never a browser opened silently."""
-
-
-def client_id() -> str:
-    """The configured client id; a readable error when there is none."""
-    from harness.safety.secrets import client_env
-
-    value = client_env(CLIENT_ID_ENV)
-    if not value:
-        raise CodexAuthError(NO_CLIENT_ERROR)
-    return value

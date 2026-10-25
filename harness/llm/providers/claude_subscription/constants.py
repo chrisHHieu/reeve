@@ -12,9 +12,8 @@ CONSOLE_AUTHORIZE_URL = "https://platform.claude.com/oauth/authorize"
 TOKEN_URL = "https://platform.claude.com/v1/oauth/token"
 API_BASE_URL = "https://api.anthropic.com"
 
-#: Where the sign-in's OAuth client id is read, in the environment or the state folder's `.env`.
-#: None ships in the source tree, the way the connectors' one-click ids do not.
-CLIENT_ID_ENV = "REEVE_CLAUDE_CLIENT_ID"
+# Registered OAuth client ID for Claude Code subscription
+CLIENT_ID = "9d1c250a-e61b-44d9-88ed-5944d1962f5e"
 
 # Loopback callback configuration
 CALLBACK_PORT = 53692
@@ -58,25 +57,9 @@ PORT_BUSY_ERROR = (
 )
 
 
-NO_CLIENT_ERROR = (
-    f"Claude sign-in needs an OAuth client id: set {CLIENT_ID_ENV} in Reeve's .env, or use an "
-    "Anthropic API key."
-)
-
-
 class AnthropicSubscriptionAuthError(RuntimeError):
     """A subscription-auth failure with a message the user can read."""
 
 
 class AnthropicSubscriptionSignInRequired(AnthropicSubscriptionAuthError):
     """No usable tokens. An explicit sign-in is required."""
-
-
-def client_id() -> str:
-    """The configured OAuth client id; a readable error when there is none."""
-    from harness.safety.secrets import client_env
-
-    value = client_env(CLIENT_ID_ENV)
-    if not value:
-        raise AnthropicSubscriptionAuthError(NO_CLIENT_ERROR)
-    return value

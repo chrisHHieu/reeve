@@ -98,9 +98,10 @@ already sent to a provider or connector.
   (An older build's `memory_embedding` profile may remain; nothing reads it since memory
   stopped using embeddings.)
   `${VAR}` references resolve from the process environment or a `.env` file beside it.
-- No OAuth client id or secret ships in the source. One-click sign-in reads them from the
-  process environment or that same `.env` (the keys are listed in the README); without them a
-  connector offers only its manual way.
+- No connector's OAuth client id or secret ships in the source. One-click sign-in reads them
+  from the process environment or that same `.env` (the keys are listed in the README); without
+  them a connector offers only its manual way. The Claude and ChatGPT plan sign-ins use the
+  vendors' own public client ids, which are in the source.
 - `[share] token` lives plaintext in `config.toml`.
 - The only OS credential store used is Windows Credential Manager, for remembered remote
   SSH passwords (`harness/config/credentials.py`); other platforms store nothing and ask again.

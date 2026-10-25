@@ -49,21 +49,6 @@ def _id_token(email: str = "user@example.com", account: str = "acct_1") -> str:
     return _unsigned_jwt({"email": email, CLAIM: {"chatgpt_account_id": account}})
 
 
-CLIENT = "app_test0client"
-
-
-@pytest.fixture(autouse=True)
-def _client_id(monkeypatch):
-    """No client id ships in the source; these tests run as an operator who set one."""
-    monkeypatch.setenv(constants.CLIENT_ID_ENV, CLIENT)
-
-
-def test_without_a_client_id_the_sign_in_says_what_to_set(monkeypatch):
-    monkeypatch.delenv(constants.CLIENT_ID_ENV)
-    with pytest.raises(CodexAuthError, match=constants.CLIENT_ID_ENV):
-        build_authorize_url("s", "c")
-
-
 def _token_answer(status: int = 200, body: dict | None = None):
     return SimpleNamespace(status_code=status, json=lambda: body or {})
 
@@ -88,7 +73,7 @@ def test_the_authorize_link_asks_for_a_code_back_on_the_loopback_page():
     assert f"{link.scheme}://{link.netloc}{link.path}" == constants.AUTHORIZE_URL
     query = {key: values[0] for key, values in parse_qs(link.query).items()}
     assert query == {**query,
-        "response_type": "code", "client_id": CLIENT,
+        "response_type": "code", "client_id": constants.CLIENT_ID,
         "redirect_uri": "http://localhost:1455/auth/callback", "state": "st4te",
         "code_challenge": "ch4llenge", "code_challenge_method": "S256",
         "codex_cli_simplified_flow": "true", "originator": constants.ORIGINATOR,
@@ -184,7 +169,7 @@ def test_a_token_close_to_expiry_is_refreshed_and_what_the_refresh_omits_is_kept
     fresh = _access_token(7200)
     monkeypatch.setattr(tokens, "_token_post", lambda data, timeout=30.0: asked.update(data) or _token_answer(body={"access_token": fresh}))
     assert CodexTokenStore(secrets).access_token() == (fresh, "acct_1")
-    assert asked == {"grant_type": "refresh_token", "refresh_token": "rt-1", "client_id": CLIENT}
+    assert asked == {"grant_type": "refresh_token", "refresh_token": "rt-1", "client_id": constants.CLIENT_ID}
     kept = secrets.get(PROFILE)["tokens"]
     assert kept["access_token"] == fresh and kept["refresh_token"] == "rt-1"
 
