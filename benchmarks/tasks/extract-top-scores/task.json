@@ -1,0 +1,16 @@
+{
+  "id": "extract-top-scores",
+  "prompt": "Read data.csv and write result.json: a JSON array of the top 3 rows by score, descending, each as {\"name\": ..., \"score\": ...}. Scores are numbers, not strings.",
+  "setup": {
+    "data.csv": "name,score\nana,7.5\nbill,9.0\ncleo,8.5\ndane,6.0\n"
+  },
+  "check": {
+    "type": "json_matches",
+    "path": "result.json",
+    "expected": [
+      { "name": "bill", "score": 9.0 },
+      { "name": "cleo", "score": 8.5 },
+      { "name": "ana", "score": 7.5 }
+    ]
+  }
+}

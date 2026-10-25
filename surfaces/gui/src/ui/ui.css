@@ -1,0 +1,497 @@
+/* The Agent Code design system layer: motion tokens, and the primitives built on them.
+
+   Loaded after `styles.css` so it can extend the palette that is already the single source of
+   truth for both themes (`--paper`/`--panel`/`--ink`/…). Nothing here re-declares a colour —
+   it names the ROLES those colours play, so a component asks for `--st-run` or `--elev-2`
+   instead of picking a hex and a blur radius of its own.
+
+   This header was written as `//` lines from 2026-09-15 to 2026-10-10. CSS has no line comment,
+   so the parser read them as the start of the next rule's selector and dropped the whole `:root`
+   block below: every token here (durations, easing, radii, elevation, control sizes) was unset
+   app-wide, and every transition that named one did not run. Found when Settings' motion would
+   not play (`getComputedStyle(html).getPropertyValue("--dur-3")` was empty). */
+
+:root {
+  /* -- motion ---------------------------------------------------------------- */
+  --dur-1: 90ms;    /* press feedback */
+  --dur-2: 150ms;   /* hover / colour changes */
+  --dur-3: 240ms;   /* open / close, layout moves */
+  --dur-4: 380ms;   /* a settled surface arriving */
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in-out: cubic-bezier(.4, 0, .2, 1);
+
+  /* -- shape ---------------------------------------------------------------- */
+  --r-xs: 4px;
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 12px;
+  --r-pill: 999px;
+
+  /* -- elevation ------------------------------------------------------------ */
+  --elev-1: 0 1px 2px rgba(15, 18, 22, .06), 0 1px 1px rgba(15, 18, 22, .04);
+  --elev-2: 0 6px 20px -8px rgba(15, 18, 22, .18), 0 2px 6px rgba(15, 18, 22, .06);
+  --elev-3: 0 24px 48px -24px rgba(15, 18, 22, .28), 0 8px 20px -12px rgba(15, 18, 22, .18);
+
+  /* -- status roles --------------------------------------------------------- */
+  --st-run: var(--accent);
+  --st-ok: var(--ok-dot);
+  --st-warn: var(--warn-ink);
+  --st-err: var(--danger);
+
+  /* -- control metrics ------------------------------------------------------ */
+  --ctl-h-sm: 24px;
+  --ctl-h-md: 30px;
+  --ctl-pad: 10px;
+}
+
+html[data-theme="dark"] {
+  --elev-1: 0 1px 2px rgba(0, 0, 0, .5);
+  --elev-2: 0 8px 24px -10px rgba(0, 0, 0, .7), 0 2px 6px rgba(0, 0, 0, .4);
+  --elev-3: 0 28px 56px -28px rgba(0, 0, 0, .8), 0 10px 24px -14px rgba(0, 0, 0, .6);
+}
+
+/* == Disclosure ==============================================================
+   A grid row that animates from `0fr` to `1fr`. No measured height, so content that grows
+   while it is open (a streaming diff, a command still writing output) keeps animating
+   correctly instead of being clipped at a stale max-height. */
+.ui-disclosure {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows var(--dur-3) var(--ease-out);
+}
+.ui-disclosure[data-open] { grid-template-rows: 1fr; }
+.ui-disclosure-inner { min-height: 0; overflow: hidden; }
+/* `fold-fade`: the content fades with the height and comes down 6px into place, so a list
+   that opens is seen arriving, not uncovered behind a moving edge (Settings' FoldBody). */
+@media (prefers-reduced-motion: no-preference) {
+  .ui-disclosure.fold-fade > .ui-disclosure-inner {
+    opacity: 0; transform: translateY(-6px);
+    transition: opacity var(--dur-3) var(--ease-out), transform var(--dur-3) var(--ease-out);
+  }
+  .ui-disclosure.fold-fade[data-open] > .ui-disclosure-inner { opacity: 1; transform: none; transition-delay: 40ms; }
+}
+
+/* The legacy mount keyframe is retired for anything that goes through `Disclosure`: the
+   grid transition replaces it, and stacking both would double the motion. The class stays on
+   the wrapper because descendant rules (`.disclosure-body .tool-row`) still key off it. */
+.ui-disclosure.disclosure-body {
+  animation: none;
+  overflow: visible;
+}
+
+/* == Tool-row additions ======================================================
+   The clock that replaces a running row's summary, and the one-shot settle that marks the
+   moment a call stopped working. Both live here rather than in styles.css so the tool-row
+   rules stay in one place per concern: structure there, motion here. */
+.tool-row-elapsed { margin-left: auto; }
+/* The copy affordance on a failed row's body: right-aligned, quiet, under the output it
+   copies — the same place a card puts its own copy button. */
+.tool-error-actions { display: flex; justify-content: flex-end; margin-top: 4px; }
+/* The moment a row stops working: its mark goes from the live accent to the resting ink in
+   150ms. It used to pop to 114% and wear a status colour for half a second (owner,
+   2026-10-13: no pops, feedback inside 200ms). */
+.tool-row-leading { transition: color 150ms var(--ease-out); }
+
+/* == Card affordances ========================================================
+   The file-change badge on a diff banner. Three states, three colours, and the word is always
+   there — a reader who cannot separate the greens should not have to. */
+.diff-status {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: lowercase;
+  background: var(--paper);
+  color: var(--faint);
+}
+.diff-status[data-status="added"] { background: var(--ok-soft); color: var(--ok); }
+.diff-status[data-status="deleted"] { background: var(--danger-soft); color: var(--danger); }
+
+/* == Queued prompts ==========================================================
+   What the user wrote while the agent was busy: rows of the composer's own card, above
+   the text. Each says what waits and that it goes after this turn, and offers "Send now"
+   and a way to take it back. */
+.queued-prompts { list-style: none; margin: 0; padding: 0; }
+.queued-prompt {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 0 6px 0 12px;
+  border-bottom: 1px solid var(--line-muted);
+  font-size: 12.5px;
+  color: var(--muted);
+  animation: queued-in var(--dur-2) var(--ease-out);
+}
+@keyframes queued-in { from { opacity: 0; transform: translateY(4px); } }
+.queued-prompt-icon { flex: none; color: var(--faint); }
+.queued-prompt-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--ink);
+}
+.queued-prompt-more .queued-prompt-text { color: var(--muted); }
+.queued-prompt-skill {
+  flex: none;
+  padding: 1px 5px;
+  border-radius: var(--r-xs);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+.queued-prompt-count,
+.queued-prompt-when { flex: none; font-size: 12px; color: var(--faint); white-space: nowrap; }
+.queued-prompt-now {
+  flex: none;
+  height: 26px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--accent);
+  font-size: 12.5px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: color var(--dur-2) ease-out;
+}
+.queued-prompt-now:hover { color: var(--ink); }
+.queued-prompt-now.quiet { color: var(--muted); font-weight: 400; }
+.queued-prompt-x {
+  flex: none;
+  width: 24px;
+  height: 24px;
+  display: inline-grid;
+  place-items: center;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--faint);
+  cursor: pointer;
+  transition: color var(--dur-2) ease-out;
+}
+.queued-prompt-x:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  .queued-prompt { animation: none; }
+  .queued-prompt-now, .queued-prompt-x { transition: none; }
+}
+/* A narrow card: "after this turn" gives way first; the message and its two actions stay. */
+@container (max-width: 480px) { .queued-prompt-when { display: none; } }
+
+/* == Toasts ==================================================================
+   Top-right, clear of the composer and the rail's own chrome. A stack, newest last, so the
+   eye lands on the same spot whatever arrived. */
+.ui-toasts {
+  position: fixed;
+  top: 52px;
+  right: 16px;
+  z-index: 500;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  pointer-events: none;
+}
+.ui-toast {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 9px 10px 9px 11px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  box-shadow: var(--elev-3);
+  pointer-events: auto;
+  animation: toast-in var(--dur-3) var(--ease-out);
+}
+@keyframes toast-in {
+  from { opacity: 0; transform: translateY(-6px) scale(.98); }
+  to { opacity: 1; transform: none; }
+}
+.ui-toast[data-tone="success"] { border-color: var(--ok-line); }
+.ui-toast[data-tone="error"] { border-color: var(--danger-soft); }
+.ui-toast-mark { flex: none; margin-top: 1px; color: var(--faint); }
+.ui-toast[data-tone="success"] .ui-toast-mark { color: var(--ok); }
+.ui-toast[data-tone="error"] .ui-toast-mark { color: var(--danger); }
+.ui-toast-body { flex: 1 1 auto; min-width: 0; }
+.ui-toast-title {
+  font-size: var(--fs-ui);
+  font-weight: 600;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.ui-toast-description {
+  margin-top: 2px;
+  font-size: var(--fs-mono);
+  line-height: 1.45;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.ui-toast-action {
+  flex: none;
+  align-self: center;
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-label);
+  font-weight: 600;
+  color: var(--accent);
+  background: var(--accent-soft);
+  cursor: pointer;
+}
+.ui-toast-close {
+  flex: none;
+  align-self: flex-start;
+  padding: 2px;
+  color: var(--faint);
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.ui-toast-close:hover { color: var(--ink); }
+
+/* == Micro-transitions =======================================================
+   One-shot fades for content that is REPLACED rather than revealed (a label settling from
+   "Reading for 12s" to "Worked for 12s"). Never a state in itself: the final frame is the
+   plain element, so a re-render does not re-run it. */
+.ui-fade { animation: ui-fade var(--dur-3) var(--ease-out); }
+@keyframes ui-fade { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  .ui-fade { animation: none; }
+}
+
+/* == Loading skeleton ========================================================
+   The shape of a transcript arriving. The shimmer is one slow gradient sweep across the whole
+   block, not per-row animation: the point is that the area is alive, and eight independent
+   pulses would read as eight things happening. */
+.session-skeleton { padding-top: 8px; }
+.skeleton-row,
+.skeleton-bubble {
+  border-radius: var(--r-md);
+  background: linear-gradient(
+    90deg,
+    var(--paper) 0%,
+    color-mix(in srgb, var(--paper) 55%, var(--panel)) 50%,
+    var(--paper) 100%
+  );
+  background-size: 200% 100%;
+  animation: skeleton-sweep 1.6s linear infinite;
+}
+.skeleton-row { height: 12px; margin-bottom: 6px; }
+.skeleton-bubble { height: 76px; margin-bottom: 18px; }
+.skeleton-bubble[data-tall] { height: 128px; }
+@keyframes skeleton-sweep {
+  from { background-position: 200% 0; }
+  to { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-row,
+  .skeleton-bubble { animation: none; }
+}
+
+/* == Elapsed =============================================================== */
+.ui-elapsed {
+  flex: none;
+  font-size: var(--fs-label);
+  color: var(--faint);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+}
+.ui-elapsed[data-running] { color: var(--muted); }
+
+/* == Tooltip =============================================================== */
+.ui-tip-wrap { display: inline-flex; }
+.ui-tip {
+  position: fixed;
+  z-index: 400;
+  max-width: min(320px, calc(100vw - 24px));
+  padding: 5px 8px;
+  border-radius: var(--r-sm);
+  background: var(--ink);
+  color: var(--canvas);
+  font-size: var(--fs-label);
+  line-height: 1.35;
+  /* A label of several lines (the models of a turn) keeps them. */
+  white-space: pre-line;
+  box-shadow: var(--elev-2);
+  pointer-events: none;
+  animation: ui-tip-in var(--dur-2) var(--ease-out);
+}
+.ui-tip[data-side="top"] { transform: translate(-50%, calc(-100% - 6px)); }
+.ui-tip[data-side="bottom"] { transform: translate(-50%, 6px); }
+@keyframes ui-tip-in { from { opacity: 0; } to { opacity: 1; } }
+
+/* == Buttons =============================================================== */
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  font-size: var(--fs-ui);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color var(--dur-2) ease, border-color var(--dur-2) ease,
+    color var(--dur-2) ease, box-shadow var(--dur-2) ease, transform var(--dur-1) ease;
+}
+.ui-btn-sm { height: var(--ctl-h-sm); padding: 0 8px; font-size: var(--fs-label); }
+.ui-btn-md { height: var(--ctl-h-md); padding: 0 var(--ctl-pad); }
+.ui-btn:disabled { cursor: default; opacity: .5; }
+/* The text is the panel colour, not white: the dark theme's accent is a light blue, and
+   white on it measured 1.9:1 (the Automations page's primary button, 2026-10-11). */
+.ui-btn-primary { background: var(--accent); color: var(--panel); }
+.ui-btn-secondary {
+  background: var(--panel);
+  border-color: var(--line);
+  color: var(--ink);
+  box-shadow: var(--elev-1);
+}
+.ui-btn-ghost { background: transparent; color: var(--muted); }
+.ui-btn-danger { background: transparent; color: var(--danger); border-color: var(--danger-soft); }
+.ui-btn-secondary:not(:disabled):hover { color: var(--ink); }
+.ui-btn-ghost:not(:disabled):hover { color: var(--ink); }
+.ui-btn-primary:not(:disabled):hover { filter: brightness(1.06); }
+.ui-btn-danger:not(:disabled):hover { background: var(--danger-soft); }
+
+.ui-iconbtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid transparent;
+  border-radius: var(--r-sm);
+  color: var(--muted);
+  cursor: pointer;
+  transition: background-color var(--dur-2) ease, color var(--dur-2) ease,
+    transform var(--dur-1) ease;
+}
+.ui-iconbtn-sm { width: var(--ctl-h-sm); height: var(--ctl-h-sm); }
+.ui-iconbtn-md { width: var(--ctl-h-md); height: var(--ctl-h-md); }
+.ui-iconbtn:disabled { cursor: default; opacity: .5; }
+.ui-iconbtn-ghost:not(:disabled):hover { color: var(--ink); }
+.ui-iconbtn-danger:not(:disabled):hover { background: var(--danger-soft); color: var(--danger); }
+
+.ui-btn:focus-visible,
+.ui-iconbtn:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+/* == Spinner =============================================================== */
+.ui-spinner {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  flex: none;
+  border: 1.6px solid currentColor;
+  border-top-color: transparent;
+  border-radius: var(--r-pill);
+  opacity: .8;
+  animation: spin .7s linear infinite;
+}
+
+/* Motion off, everywhere, in one place. `prefers-reduced-motion` already guards the older
+   inline rules; this covers the primitives above without repeating the query per rule. */
+@media (prefers-reduced-motion: reduce) {
+  .ui-disclosure { transition: none; }
+  .ui-tip { animation: none; }
+  .ui-spinner { animation-duration: 1.6s; }
+  .ui-btn:active,
+  .ui-iconbtn:active { transform: none; }
+}
+
+
+/* -- pages ----------------------------------------------------------------------------------
+   The shell every full-window page shares (ui/Page.tsx). The title scale is the one Settings
+   uses, so moving between a page and Settings does not change the type. */
+:root {
+  --page-w: 960px;
+  --page-w-wide: 1200px;
+  --fs-page: 24px;
+}
+.page { flex: 1; min-width: 0; display: flex; flex-direction: column; background: var(--canvas); }
+.page-body { flex: 1; min-width: 0; min-height: 0; display: flex; }
+.page-scroll { flex: 1; min-width: 0; min-height: 0; overflow-y: auto; }
+.page-inner { max-width: var(--page-w); margin: 0 auto; padding: 40px 44px 64px; }
+.page-inner[data-wide] { max-width: var(--page-w-wide); }
+.page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
+.page-head-copy { min-width: 0; }
+.page-title {
+  display: flex; align-items: center; gap: 10px; margin: 0;
+  font-size: var(--fs-page); font-weight: 600; letter-spacing: -0.02em; line-height: 1.15; color: var(--ink);
+}
+.page-title > svg { color: var(--accent); flex: none; }
+.page-sub { margin: 6px 0 0; max-width: 640px; font-size: 13px; line-height: 1.55; color: var(--muted); }
+.page-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 1100px) { .page-inner { padding: 32px 28px 48px; } }
+@media (max-width: 640px) { .page-inner { padding: 20px 16px 40px; } .page-head { margin-bottom: 16px; } }
+
+/* A small icon control (a 15px action under a message) keeps its look and borrows a 24px hit
+   area from the space around it. */
+.hit-24 { position: relative; }
+.hit-24::after { content: ""; position: absolute; inset: -5px; }
+
+/* Dialog (ui/Dialog.tsx): on body, above the app and below toasts (z 400/500). The panel is in
+   the middle of the window, both ways (owner, 2026-10-12: at 12vh from the top it read as
+   off). The row is the grid's one auto track, so a sheet taller than the window starts at the
+   top and scrolls; it is never cut off above. */
+.ui-dialog-root {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  justify-items: center;
+  align-items: center;
+  padding: 24px 16px;
+  overflow-y: auto;
+}
+.ui-dialog-scrim { position: fixed; inset: 0; background: rgb(15 18 22 / 0.32); }
+.ui-dialog {
+  position: relative;
+  width: min(460px, 100%);
+  border-radius: 16px;
+  background: var(--panel);
+  box-shadow: var(--elev-3), 0 0 0 1px var(--line-muted);
+  outline: none;
+}
+html[data-theme="dark"] .ui-dialog-scrim { background: rgb(0 0 0 / 0.5); }
+@media (prefers-reduced-motion: no-preference) {
+  .ui-dialog-scrim { animation: ui-fade var(--dur-2) var(--ease-out); }
+  .ui-dialog { animation: ui-dialog-in var(--dur-3) var(--ease-out) backwards; }
+}
+@keyframes ui-dialog-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+/* ConfirmDialog: a question, what happens, Cancel (focused) and the action in the danger tone. */
+.ui-confirm { display: flex; flex-direction: column; gap: 10px; padding: 20px; }
+.ui-confirm-title { margin: 0; color: var(--ink); font-size: 15px; font-weight: 600; line-height: 1.35; text-wrap: balance; }
+.ui-confirm-body { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+.ui-confirm-error { margin: 0; color: var(--danger); font-size: 12.5px; }
+.ui-confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+.ui-confirm-btn {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.ui-confirm-btn:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); }
+.ui-confirm-btn.danger { border-color: transparent; background: var(--danger); color: var(--canvas); font-weight: 500; }
+.ui-confirm-btn.primary { border-color: transparent; background: var(--accent); color: var(--canvas); font-weight: 500; }
+.ui-confirm-btn.primary:hover:not(:disabled) { background: var(--accent); filter: brightness(1.06); }
+/* The quit dialog's list of what would stop. */
+.ui-confirm-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 2px; }
+.ui-confirm-list li { display: flex; align-items: center; gap: 8px; min-height: 26px; font-size: 13px; color: var(--ink); }
+.ui-confirm-list li::before { content: ""; flex: none; width: 6px; height: 6px; border-radius: 50%; background: var(--accent); }
+.ui-confirm-list .fact { margin-left: auto; color: var(--faint); font-size: 12px; font-variant-numeric: tabular-nums; }
+.ui-confirm-btn.danger:hover:not(:disabled) { background: var(--danger); filter: brightness(1.06); }
+.ui-confirm-btn:disabled { opacity: 0.5; cursor: default; }
+.ui-confirm-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }

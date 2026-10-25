@@ -1,0 +1,13 @@
+{
+  "id": "summarize-sources",
+  "prompt": "Read the three markdown files under sources/. Write summary.md with exactly one bullet per file, each formatted `- <filename>: <the value after 'Topic:' in that file>`. Nothing else in the file.",
+  "setup": {
+    "sources/alpha.md": "# Alpha\nTopic: onboarding-flow\nOwner: platform team\nQ3 goal: cut signup drop-off.\n",
+    "sources/beta.md": "# Beta\nTopic: billing-migration\nOwner: payments team\nQ3 goal: retire the legacy invoicer.\n",
+    "sources/gamma.md": "# Gamma\nTopic: retention-experiment\nOwner: growth team\nQ3 goal: lift week-4 retention.\n",
+    "test_summary.py": "from pathlib import Path\n\nROOT = Path(__file__).resolve().parent\n\n\ndef test_summary_names_every_source():\n    text = (ROOT / \"summary.md\").read_text(encoding=\"utf-8\")\n    assert \"onboarding-flow\" in text\n    assert \"billing-migration\" in text\n    assert \"retention-experiment\" in text\n\n\ndef test_summary_has_one_bullet_per_source():\n    lines = (ROOT / \"summary.md\").read_text(encoding=\"utf-8\").splitlines()\n    bullets = [line for line in lines if line.startswith(\"- \")]\n    assert len(bullets) == 3\n"
+  },
+  "check": {
+    "type": "pytest"
+  }
+}

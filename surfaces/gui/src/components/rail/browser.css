@@ -1,0 +1,194 @@
+/* Browser tab body — 38px toolbar, 28px tools, focus-only Go button and the sandbox
+   warning strip. Geometry expressed on the
+   Harbor tokens; see docs/mockups/rv-artifact-panel.html, scene 4. Self-contained on
+   purpose: imported by BrowserView.tsx, no rules live in styles.css. */
+
+.browser-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--canvas);
+}
+
+.browser-toolbar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 4px;
+  height: 38px;
+  padding: 5px 6px;
+  border-bottom: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.browser-tool {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  color: var(--muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.browser-tool:hover:not(:disabled) {
+  color: var(--ink);
+}
+
+.browser-tool:disabled {
+  color: var(--faint);
+  opacity: 0.55;
+  cursor: default;
+}
+
+
+
+.browser-address {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.browser-address input {
+  width: 100%;
+  height: 28px;
+  padding: 0 34px 0 9px;
+  color: var(--ink);
+  font: 12px var(--mono);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  outline: none;
+}
+
+.browser-address input::placeholder {
+  color: var(--faint);
+}
+
+.browser-address:focus-within input {
+  border-color: var(--line-strong);
+}
+
+.browser-address .browser-go {
+  position: absolute;
+  top: 0;
+  right: 0;
+  visibility: hidden;
+  opacity: 0;
+}
+
+.browser-address:focus-within .browser-go {
+  visibility: visible;
+  opacity: 1;
+}
+
+.browser-error {
+  flex: none;
+  padding: 6px 12px;
+  color: var(--danger);
+  background: var(--danger-soft);
+  border-bottom: 1px solid var(--line);
+  font: 11px var(--mono);
+}
+
+.browser-warning {
+  flex: none;
+  padding: 6px 12px;
+  color: var(--warn-ink);
+  background: var(--warn-soft);
+  border-bottom: 1px solid var(--line);
+  font: 11px var(--mono);
+}
+
+.browser-frame {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  border: 0;
+  background: var(--panel);
+}
+
+.browser-start {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+  padding: 24px;
+  color: var(--faint);
+  font-size: 13px;
+  text-align: center;
+}
+
+/* -- Workspace panel redesign, 2026-10-11 ----------------------------------------------
+   The ⋯ menu holds what is not used every time (page width, ask Reeve, open outside, copy,
+   the sandbox); a mistyped address is said under the box; a local server that does not answer,
+   a site that refuses frames and a page that takes long each say so, with one way forward. */
+.browser-toolbar { position: relative; height: 44px; padding: 7px 6px; background: var(--canvas); border-bottom-color: var(--line-muted); }
+.browser-address input { height: 30px; background: var(--panel); border-radius: 8px; transition: border-color var(--dur-2) var(--ease-out); }
+.browser-address.bad input { border-color: var(--danger); }
+.browser-menu-wrap { position: relative; flex: none; }
+.browser-menu { position: absolute; top: calc(100% + 6px); right: 0; z-index: 40; width: 250px; padding: 6px; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1), 0 4px 6px -4px rgba(0, 0, 0, .1); animation: rail-menu-in var(--dur-2) var(--ease-out); }
+.browser-menu-head { padding: 6px 8px 4px; font-size: 12px; font-weight: 500; color: var(--muted); }
+.browser-width { margin: 2px 8px 6px; }
+.browser-menu > button { display: flex; align-items: center; width: 100%; height: 32px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--ink); font: inherit; font-size: var(--fs-ui); text-align: left; cursor: pointer; transition: background-color 120ms var(--ease-out); }
+.browser-menu > button:hover:not(:disabled), .browser-menu > button:focus-visible { background: var(--overlay-hover); outline: none; }
+.browser-menu > button:disabled { color: var(--faint); cursor: default; }
+.browser-menu-sep { height: 1px; margin: 6px 4px; background: var(--line-muted); }
+.browser-loading { position: absolute; left: 0; right: 0; bottom: -1px; height: 2px; background: var(--ink); transform-origin: left center; animation: browser-load 4s var(--ease-out) forwards; pointer-events: none; }
+@keyframes browser-load { from { transform: scaleX(0); } to { transform: scaleX(.92); } }
+.browser-error, .browser-warning, .browser-note { display: flex; align-items: center; gap: 8px; margin: 8px 10px 0; padding: 8px 10px; border: 0; border-radius: 8px; font: 12.5px var(--sans); animation: rvw-fade 150ms var(--ease-out); }
+.browser-error { color: var(--danger); background: var(--danger-soft); }
+.browser-error .mono { font: 12px var(--mono); }
+.browser-warning { justify-content: space-between; color: var(--warn-ink); background: var(--warn-soft); }
+.browser-note { color: var(--muted); background: none; border: 1px solid var(--line); }
+.browser-inline { flex: none; height: 26px; padding: 0 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); font: inherit; font-size: 12px; cursor: pointer; }
+.browser-start { flex-direction: column; align-items: stretch; justify-content: flex-start; gap: 20px; padding: 20px 16px; overflow: auto; color: var(--muted); text-align: left; }
+.browser-start > * { width: 100%; max-width: 600px; margin-inline: auto; }
+.browser-start-note { margin: 0; font-size: 12px; color: var(--faint); text-wrap: pretty; }
+.browser-state { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; padding: 24px; text-align: center; animation: rvw-fade 150ms var(--ease-out); }
+.browser-state-title { font-size: 14px; font-weight: 600; color: var(--ink); text-wrap: balance; }
+.browser-state-text { max-width: 380px; font-size: 13px; color: var(--muted); text-wrap: pretty; }
+.browser-state-actions { display: flex; gap: 8px; margin-top: 4px; }
+.browser-primary { height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: var(--ink); color: var(--canvas); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.browser-secondary { height: 30px; padding: 0 12px; border: 1px solid var(--line); border-radius: 7px; background: var(--panel); color: var(--ink); font: inherit; font-size: 13px; cursor: pointer; }
+.browser-secondary:hover { border-color: var(--line-strong); }
+.browser-stage { position: relative; flex: 1; min-height: 0; display: flex; justify-content: center; }
+.browser-stage[data-width="phone"], .browser-stage[data-width="tablet"] { background: var(--paper); padding: 12px 0; overflow: auto; }
+.browser-stage[data-width="phone"] .browser-frame, .browser-stage[data-width="tablet"] .browser-frame { flex: none; max-width: 100%; border: 1px solid var(--line); border-radius: 8px; }
+.browser-slow { position: absolute; left: 12px; right: 12px; bottom: 12px; display: flex; align-items: center; gap: 10px; padding: 8px 8px 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--panel); box-shadow: 0 10px 15px -3px rgba(0, 0, 0, .1); font-size: 13px; color: var(--muted); animation: terminal-up var(--dur-2) var(--ease-out); }
+.browser-slow span { flex: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .browser-menu, .browser-loading, .browser-error, .browser-warning, .browser-note, .browser-state, .browser-slow { animation: none; }
+}
+
+/* -- Drawn as OpenDesign's browser (the owner's pick, 2026-10-19) ------------------------
+   A taller bar with round tools, the address in a round field with a globe ahead of it, Go only
+   while the typed address differs, a picture and the page's look one click away, and a menu
+   whose rows carry icons. Hover changes the ink; only menu rows take a fill. */
+.browser-toolbar { height: 52px; gap: 6px; padding: 8px 10px; background: var(--panel); }
+.browser-tool { width: 32px; height: 32px; border-radius: 9px; transition: color var(--dur-2) var(--ease-out); }
+.browser-address { display: flex; align-items: center; }
+.browser-address-mark { position: absolute; left: 13px; color: var(--muted); pointer-events: none; }
+.browser-address input {
+  height: 36px; padding: 0 40px 0 36px; border-radius: 999px; background: var(--paper); border-color: transparent;
+  font: 13px var(--sans); font-weight: 500;
+}
+.browser-address:focus-within input { background: var(--panel); border-color: var(--line-strong); }
+.browser-address .browser-go { top: 2px; right: 4px; border-radius: 999px; }
+.browser-address.dirty .browser-go { visibility: visible; opacity: 1; }
+.browser-menu { width: 270px; border-radius: 12px; }
+.browser-menu > button.browser-menu-item { gap: 10px; height: 34px; padding: 0 10px; border-radius: 8px; font-size: 13px; }
+.browser-menu-item svg { flex: none; color: var(--muted); }
+.browser-menu > button.browser-menu-item:disabled svg { color: var(--faint); }
+.browser-outcome { justify-content: space-between; color: var(--ink); }
+.browser-outcome > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The box a browser of its own is laid over (desktop shell): it holds nothing itself. */
+.browser-native { flex: 1; min-height: 0; width: 100%; background: var(--panel); }
+.browser-stage[data-width="phone"] .browser-native, .browser-stage[data-width="tablet"] .browser-native { flex: none; max-width: 100%; }

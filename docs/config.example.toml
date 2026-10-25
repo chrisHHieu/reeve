@@ -1,0 +1,342 @@
+# Reeve's settings file. Copy it to either place:
+#   ~/.config/Reeve/config.toml          (global)
+#   <your-project>/.reeve/config.toml    (per-workspace, overrides global)
+#
+# Every key may be left out, and then the built-in default holds.
+
+model = "gpt-5.5"            # the model a new conversation starts on; the app and the CLI can change it
+# Routes tried when the session's model fails in a way another model can answer:
+# rate limits, overloaded upstreams, an out-of-quota or no-access account,
+# transport failures and empty streams. In order; the failed route is cooled (60s→4h)
+# and the turn continues on the next one before it gives up. Empty = one-route
+# behaviour. GLOBAL-ONLY: a cloned repository must not redirect model traffic.
+# fallback_models = ["openrouter:z-ai/glm-5.3", "openai:gpt-5.6-sol"]
+mode = "workspace-write"     # read-only | workspace-write | danger-full-access
+                             # (the desktop app's Settings ▸ General choice, once made,
+                             # wins over this for the conversations it opens)
+max_iterations = 0           # max model<->tool iterations per turn. 0 = UNCAPPED, the
+                             # long-horizon default (an unbounded core loop):
+                             # a turn runs
+                             # until the model stops, you stop it, or the repeat guard trips.
+                             # A positive number bounds the turn — and a stop still writes a
+                             # handoff, so "continue" resumes from where it left off.
+max_parallel_tools = 10      # low-risk reads that may overlap in one step (0 = uncapped, 1 = serial)
+
+# Commands that run without asking, matched by how they start.
+allowed_commands = [
+  "cat", "find", "grep", "ls", "pwd",
+  "git diff", "git log", "git status",
+  "node", "npm", "pytest", "python3",
+]
+
+# Tools auto-approved in every preset that would otherwise ask (e.g. accept file edits
+# but keep asking before running shell commands).
+auto_allow = ["apply_patch", "apply_unified_diff", "replace_in_file", "write_file"]
+
+# Subagents (the `task` tool's delegated children). A step is one model turn with its
+# tool calls. `0` = UNCAPPED, following the reference agent (`agent.steps ?? Infinity`): the child
+# runs until it stops, its 600 s wall clock fires, or its repeat guard trips — and
+# whichever rail fires, the child is asked for its REPORT, so a stop still hands back
+# findings. `[agents.<name>].steps` overrides this for one agent.
+subagent_steps = 0
+
+# How many levels of subagents a chain may reach (the reference agent's `subagent_depth`,
+# `tool/task.ts:104-117`). Counted by walking the session ancestry when `task` is called:
+# a root session is 0, its child 1, a grandchild 2. The default 1 lets a session delegate
+# and stops a child from delegating further. `2` lets a child spawn a grandchild — and
+# only an agent whose OWN `permission` mentions `task` gets the tool back, so nesting is
+# opt-in per agent. `0` disables subagents entirely: the `task` tool is not registered.
+subagent_depth = 1
+
+# How many subagents one session may run at once. A call past it that waits for its result
+# waits for a slot; a background call is refused, since it chose not to wait.
+# Read on every spawn, so a change applies to the next `task` call with no restart. All
+# children share one provider key, so a wide fan-out meets the provider's rate limit sooner;
+# `0` removes the cap, leaving only the 50-spawns-a-turn limit.
+subagent_max_parallel = 4
+
+# Goal rounds (the reference harness's `defaultMaxGoalRounds`): the cap a goal gets when neither the model
+# nor the person names one, applied by the `goal` tool and the `/goal` command alike.
+# The accepted range is the reference harness's positive safe integer (1 .. 2^53-1); an invalid or
+# non-positive value logs and falls back to the default 256, and a larger one clamps.
+# The table merges global < workspace per key.
+[goal]
+max_rounds = 256
+
+# Delegation behavior for `task`-spawned subagents.
+# `worktree_isolation` (default false): each child gets its OWN git worktree at
+# `<repo>/.worktrees/subagent-<id>` on branch `reeve-sub/<id>`, so parallel coding
+# children cannot fight over the same files. A worktree is released when the child
+# finishes ONLY if it is clean and has zero commits; anything with work in it is kept,
+# and its row in the Subagents list offers Apply (put the changes in your folder, all or
+# none) and Discard. Local, git-workspace children only — a remote child or a
+# non-repo folder falls back to the parent's workspace.
+# This switch isolates EVERY delegation. One delegation can ask instead: the model passes
+# `isolation = "worktree"` on a `task` call or a workflow `agent()`, and an agent
+# definition may set `isolation = "worktree"` (below) for all of its runs.
+[delegation]
+worktree_isolation = false
+# A child running in the background (asked for, promoted, or auto-backgrounded after two
+# minutes) is stopped after this many minutes; its partial report still reaches the
+# parent as a failed task. 0 turns the clock off.
+# background_timeout_minutes = 30
+
+# The agent the reference agent starts a new session on (`config.ts:80-83`, `agent.ts:328-340`).
+# Must name an agent in the task-agent map (`general`, `explore`, or an `[agents.*]`
+# entry) that is neither `mode = "subagent"` nor hidden; anything else is an error with
+# the reference agent's exact message. A session here always runs Reeve's one agent, so this key
+# is validated and served as data: the `GET /v1/subagents` row carries `default = true`.
+# default_agent = "reviewer"
+
+# Tool names no CHILD may use, whatever the agent's own ruleset says (the reference agent's
+# `experimental.primary_tools`): a delegation must not reach a tool reserved for the
+# person-facing session. Enforced on top of the ruleset — the tool is removed from the
+# child's registry. Empty by default.
+# primary_tools = ["send_message", "send_file"]
+
+# Subagent definitions, the reference agent's `agent` map. `general` and `explore` ship built in;
+# a table for a new name ADDS an agent, `disable = true` removes one. `prompt` REPLACES
+# the base system prompt for that agent (the reference agent's rule), and `permission` is the
+# ruleset that decides which tools the child even has: a wildcard deny removes the tool,
+# a specific pattern answers at call time, last match wins.
+#
+# [agents.explore]
+# description = "Fast agent specialized for exploring codebases."
+# model = "opencode-go/deepseek-v4.1-flash"
+# steps = 60
+# temperature = 0.2
+# prompt_file = "prompts/explore.md"
+# [agents.explore.permission]
+# "*" = "deny"
+# read = "allow"
+# grep = "allow"
+# list = "allow"
+#
+# [agents.reviewer]
+# description = "Reviews a diff and reports blocking issues as path:line."
+# mode = "subagent"
+# isolation = "worktree"   # this agent always works in its own copy
+# background = true        # every delegation to it runs in the background where the
+#                           # session can be told it finished; else in the foreground
+# [agents.reviewer.permission]
+# "*" = "deny"
+# read = "allow"
+# grep = "allow"
+
+# Markdown agents (the reference agent's `{agent,agents}/**/*.md`): the YAML frontmatter is the
+# definition and the trimmed body is `prompt` (the body wins over a frontmatter `prompt`).
+# Scanned recursively under the global config directory, the workspace root and
+# `<workspace>/.reeve`; a nested path becomes a slash name (`agents/team/helper.md` ->
+# `team/helper`), and the file merges over the same-name `[agents.*]` table with markdown
+# winning per key. A file whose frontmatter cannot be parsed is logged and skipped so the
+# other agents still load (the parity ledger's row 2.13).
+#
+#   .reeve/agents/reviewer.md:
+#   ---
+#   description: Reviews a diff and reports blocking issues as path:line.
+#   mode: subagent
+#   inject_agents: false   # optional; omit to append the project's AGENTS.md to this
+#                          # subagent's prompt (the default). false skips that block.
+#   permission:
+#     "*": deny
+#     read: allow
+#   ---
+#   You review diffs. Report findings as path:line, most severe first.
+
+# `{env:VAR}` and `{file:path}` substitute in any config STRING value. `{file:}` resolves
+# relative to the config file that wrote it; both are trimmed. A reference that does not
+# resolve stays literal with one warning rather than emptying the value.
+# [agents.librarian]
+# prompt = "{file:prompts/librarian.md}"
+
+# A global tool map: `true` allows, `false` denies, for EVERY agent. `write`/`edit`/`patch`
+# (and our `write_file`-family names) fold onto the `edit` permission. The top-level
+# `permission` table merges over it, and an agent's own `permission` over that.
+# [tools]
+# write_file = false
+# web_search = false
+
+# [permission]
+# edit = "ask"
+
+# Web tools. `web_fetch(url, prompt="…")` has a model read the page and return only
+# the answer (the full page is saved beside it), instead of putting ~20k characters of page
+# into the conversation. By default the SESSION's own model reads it; a cheaper one is the
+# better choice if you have one. Pinning another provider sends page text to it, so this
+# section is read from the global config only.
+#
+# [web]
+# extract = "auto"            # "auto" | "off" (off: `prompt` is ignored, the page is returned)
+# extract_model = ""          # "provider:model"; "" = the session's own model
+
+# Auto-compaction of long sessions. A system behavior configured HERE, never in the UI
+# (the reference agent-style). Every key is optional; an absent key falls back to the built-in
+# default. Workspace `.reeve/config.toml` may override any of them for that project.
+#
+# [compaction]
+# buffer_tokens = 20000        # answer headroom; the trigger is window - max(output, buffer)
+# keep_tokens = 8000           # newest tokens kept verbatim across a compaction;
+#                              # 0 keeps exactly the most recent assistant step
+#                              # (the newest user turn when there is none)
+# max_context_tokens = "auto"  # working window: a number (obeyed exactly; 0 = the model's
+#                              # whole window), or "auto" = the model's own window, never
+#                              # more than 400k, for every model
+# model = ""                   # summarizer model; "" = the session's own model
+# instructions = ""            # non-empty REPLACES the built-in 8-section summary prompt;
+#                              # secrets are still redacted and user messages kept verbatim
+# fold_hint_share = 0.5       # Ask for a fold only when what it would replace is at least
+#                             # this share of the request (0 = whenever 12,000 tokens can be folded)
+# model_fold = true           # Offer the model `fold_context`, which replaces the older
+#                              # part of its own context with a note it writes (the same
+#                              # transaction as a compaction, authored by the model), plus one
+#                              # hint where work has just ended (a new message, a finished task-list
+#                              # item) once ~12k tokens could be folded. On by default; the hints stop
+#                              # by themselves on a route whose cache does not survive a fold.
+#                              # Measured: about a third fewer tokens, no task lost.
+# context_budget_line = true  # a factual "context: ~Nk of ~Mk tokens before compaction"
+#                              # line, stamped at the turn start once per 10% band. No
+#                              # instruction rides it; it is context awareness only.
+# prune_after_idle_seconds = 900 # opportunistic prune of aged tool results while the
+#                              # prompt cache is ALREADY cold (a rewrite mid-prompt would
+#                              # otherwise cost the next request its cache read). UNSET =
+#                              # the provider's own cache TTL (Anthropic: 5m default, or
+#                              # 1h on the 1h tier); a number forces that idle window;
+#                              # 0 disables the pass. Providers with unknown TTL (OpenAI,
+#                              # DeepSeek) never run it unset.
+# prune_write_arguments = true  # The prune also folds aged write payloads (a
+#                              # write_file's content, an edit's two sides, a patch's hunks)
+#                              # to one line naming the file; false keeps them whole.
+# prune_rederivable = true     # The prune drops the aged output of calls that can be
+#                              # made again (read_file, grep, list_files, lsp, git reads) to a
+#                              # line naming the call, and saves shell/web output to a file it
+#                              # names; with the cache warm it runs only in batches of at least
+#                              # 20k tokens and a quarter of the request. false keeps them.
+# stage_compaction = true      # Once the context is past half the trigger, compact
+#                              # where a stage just ended verified (a check passed on every
+#                              # edit before it) instead of at the window's edge: the stage is
+#                              # summarized, only the step that checked it stays verbatim, and
+#                              # it runs only when a quarter of the trigger is new since the
+#                              # last cut.
+
+# Anthropic server-side context editing (`context-management-2025-06-27` beta). Old
+# tool results and old thinking blocks are cleared from the prompt BEFORE it reaches the
+# model — the "microcompaction" tier: long sessions stop growing between full compactions,
+# and our canonical history is never rewritten. Native Anthropic endpoint only (Vertex /
+# Bedrock / OpenCode Go stay opted out); GLOBAL-ONLY, because provider clients are cached
+# per provider and a workspace override could never take effect. ON by default; a model or
+# proxy that rejects the beta self-disables it for the process with one warning.
+#
+# [context_editing]
+# enabled = true                 # false turns the whole feature off
+# trigger_input_tokens = 100000  # clearing starts once the prompt passes this size
+# keep_tool_uses = 3             # newest N tool results are never cleared
+# clear_at_least_tokens = 15000  # cache guard: clearing breaks the prompt-cache prefix,
+#                                # so skip a pass that would save less than this (0 = API default)
+# exclude_tools = []             # tool names whose results must survive (e.g. ["read_file"])
+# clear_tool_inputs = false      # true also clears the tool CALL arguments
+# clear_thinking = true          # clear thinking blocks older than the last assistant turn
+
+# Language servers behind the `lsp` tool (definition / references / hover / document and
+# workspace symbols / diagnostics). Read-only: the tool never edits files. `enabled =
+# false` removes it for every session, and `[lsp.servers.<lang>]` replaces the shipped
+# command for one language — the first list element is the program, everything after it
+# is passed through as arguments. A program is looked up in the workspace's
+# `node_modules/.bin` and `.venv` first, then on PATH. Shipped languages: python
+# (pyright-langserver), typescript/javascript, go (gopls), rust (rust-analyzer), bash
+# (bash-language-server), yaml, json, css, html (the vscode-langservers-extracted set),
+# svelte, graphql, php (intelephense), and Dockerfile by filename.
+#
+# A language the shipped table does not know is declared the same way, plus the
+# `extensions` it owns (and an optional `language_id`; it defaults to the table key):
+#
+# [lsp]
+# enabled = true
+# Post-edit diagnostics: after a successful write on a code file, the
+# language server's ERRORS for that file are appended to the tool result the model
+# reads. It runs only when a server resolves (nothing is installed for it), on a tight
+# budget; set false to keep writes silent.
+# diagnostics_after_edit = true
+# [lsp.servers.python]
+# command = ["pyright-langserver", "--stdio"]
+# [lsp.servers.typescript]
+# command = ["typescript-language-server", "--stdio"]
+# [lsp.servers.ruby]
+# command = ["ruby-lsp"]
+# extensions = [".rb", ".rake"]
+# [lsp.servers.vue]
+# command = ["vue-language-server", "--stdio"]
+# extensions = [".vue"]
+
+# Features: what a session can do beyond the core, each a file in
+# harness/compose/features/. Naming one in `remove` leaves it out of NEW sessions: its tools,
+# its prompt section and its live context together. The core (permissions, compaction,
+# the memory door, the session log) is not a feature and cannot be named. A name that is
+# no feature is logged and ignored. The ids: messaging, deliverables, design, lsp,
+# tool_request, connectors, web, ask_user, delegation, continuity, code_mode, history,
+# memory, skills, planning, discovery.
+#
+# `add` turns on a feature that is off until asked for: tool_request (`request_tool`, asking
+# you to install a pinned gitleaks, trivy or osv-scanner instead of skipping the check).
+# Only this file can add one; a workspace's .reeve/config.toml can only remove, and its
+# `remove` joins this one's.
+#
+# [features]
+# remove = ["web", "lsp"]
+# add = ["tool_request"]
+
+# Where reeve-server listens.
+host = "127.0.0.1"
+port = 8765
+
+# Session sharing (`/share`). This app has NO hosted share service � unlike the reference agent's
+# cloud share, nothing is uploaded unless YOU configure an endpoint here.
+# The endpoint receives a POST with the exported transcript as JSON:
+#
+#   {"info": {"session_id": �, "title": �, "workspace": �, �},
+#    "messages": [ � the canonical transcript � ]}
+#
+# It must answer JSON with the public URL (`url`, `share_url` or `link`) and, if you
+# want `/unshare` to work, an id (`share_id`/`id`/`shareId`) that the revoke endpoint
+# can name. Global-only on purpose: a cloned repository must never be able to redirect
+# the upload of your transcript to a server it controls.
+#
+# [share]
+# endpoint = "https://example.test/share"
+# # Optional revoke: `/unshare` appears only when this is set AND the upload returned id.
+# revoke_endpoint = "https://example.test/share/{share_id}"
+# revoke_method = "DELETE"          # "DELETE" (default) | "POST"
+# token = ""                        # optional bearer token for both calls
+# timeout = 30.0                    # optional, seconds
+
+# Lifecycle hooks (`harness/loop/hooks_runner.py`): YOUR script at a named moment of a
+# turn. The engine runs the command, hands it JSON on stdin, and reads JSON (or plain
+# text, which becomes context) back:
+#
+#   in   {"event":"pre_tool_use","tool":"run_shell","arguments":{...},
+#         "workspace":"C:/work","session":"…","turn":3}
+#   out  {"decision":"deny","reason":"use make clean, not rm -rf"}
+#        {"context":"the team rule: run `ruff format` after every write"}
+#
+# Rules: a hook may DENY or add CONTEXT, never grant (an "allow" still goes through the
+# normal permission path); a hook that times out, crashes or prints garbage is logged and
+# the turn continues; hooks declared by a REPOSITORY (`.reeve/hooks.toml`) need your
+# trust — this file is yours, so these are trusted as written.
+#
+# Events: session_start | user_prompt_submit | pre_tool_use | post_tool_use |
+#         post_tool_use_failure | stop | session_end (the session was deleted or the app
+#         is closing; `reason` says which)
+#
+# [[hooks.pre_tool_use]]                 # one table per hook, or a list under [hooks.X]
+# name = "no-recursive-delete"
+# command = ["python", ".reeve/hooks/no_rm.py"]   # argv list, not a shell string
+# matcher = "^run_shell$"                # regex on the tool name (tool events only)
+# timeout_seconds = 10
+#
+# [[hooks.post_tool_use]]
+# name = "format"
+# command = ["ruff", "format"]
+# matcher = "write_file|replace_in_file|apply_patch"
+#
+# [[hooks.stop]]
+# name = "tests-before-done"
+# command = ["python", ".reeve/hooks/tests.py"]

@@ -1,0 +1,31 @@
+{
+ "id": "chart-from-the-workbook",
+ "mechanism": "show_visual",
+ "prompt": "File doanh-thu-2026.xlsx l\u00e0 doanh thu 9 th\u00e1ng \u0111\u1ea7u n\u0103m c\u1ee7a c\u00f4ng ty theo t\u1eebng mi\u1ec1n. Doanh thu \u0111ang \u0111i l\u00ean hay \u0111i xu\u1ed1ng, mi\u1ec1n n\u00e0o k\u00e9o t\u0103ng tr\u01b0\u1edfng? Cho t\u00f4i xem xu h\u01b0\u1edbng.",
+ "setup": {
+  "doanh-thu-2026.xlsx": "base64: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",
+  "notes.md": "# Doanh thu\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "doanh-thu-2026.xlsx"
+ ],
+ "answer_mentions": [
+  "Mi\u1ec1n B\u1eafc"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": true,
+   "blocks_any": [
+    "chart"
+   ],
+   "source": true,
+   "no_restate": true
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "notes.md",
+  "contains": "Doanh thu"
+ }
+}

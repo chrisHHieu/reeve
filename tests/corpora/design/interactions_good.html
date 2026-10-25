@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Account</title>
+<style>
+body{margin:0;font-family:Manrope,system-ui;color:#1e1a24;background:#faf9fb}
+button{font:inherit;min-height:44px;min-width:44px;padding:0 14px;border:1px solid #d8d2de;background:#ffffff;color:#1e1a24;border-radius:10px}
+header{display:flex;gap:12px;align-items:center;padding:12px 16px}
+.scrim{position:fixed;inset:0;background:rgba(30,26,36,.32);opacity:0;pointer-events:none;transition:opacity 220ms ease}
+.scrim.open{opacity:1;pointer-events:auto}
+.menu{position:fixed;top:0;left:0;bottom:0;width:260px;background:#ffffff;transform:translateX(-110%);transition:transform 240ms ease}
+.menu.open{transform:none}
+.dialog{position:fixed;left:50%;top:50%;width:300px;padding:16px;margin-left:-150px;margin-top:-80px;background:#ffffff;opacity:0;transform:scale(.95);pointer-events:none;transition:opacity 200ms ease,transform 200ms ease}
+.dialog.open{opacity:1;transform:none;pointer-events:auto}
+@media (prefers-reduced-motion: reduce){.scrim,.menu,.dialog{transition:none}}
+</style></head>
+<body>
+<header>
+  <button class="burger" aria-label="Open menu" aria-expanded="false">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <button class="signup">Create account</button>
+</header>
+<div class="scrim"></div>
+<nav class="menu" aria-label="Menu"><a href="#notes">Notes</a></nav>
+<div class="dialog" role="dialog" aria-modal="true" aria-label="Create account"><p>Free for one person.</p><button class="ok">Continue</button></div>
+<h1>Your account</h1>
+<script>
+const $ = (s) => document.querySelector(s);
+const close = () => { $('.menu').classList.remove('open'); $('.scrim').classList.remove('open'); $('.dialog').classList.remove('open'); $('.burger').setAttribute('aria-expanded', 'false'); };
+$('.burger').onclick = () => { $('.menu').classList.add('open'); $('.scrim').classList.add('open'); $('.burger').setAttribute('aria-expanded', 'true'); };
+$('.signup').onclick = () => { $('.dialog').classList.add('open'); $('.scrim').classList.add('open'); setTimeout(() => $('.ok').focus(), 0); };
+$('.scrim').onclick = close;
+$('.ok').onclick = close;
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+</script>
+</body></html>

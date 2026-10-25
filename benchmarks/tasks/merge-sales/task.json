@@ -1,0 +1,21 @@
+{
+  "id": "merge-sales",
+  "prompt": "There are three monthly CSVs under sales/. Read all three and write totals.json: a single JSON object {\"by_item\": {\"<item>\": <sum>}, \"total\": <sum of every amount>}. Amounts are numbers, not strings.",
+  "setup": {
+    "sales/2026-01.csv": "item,amount\nwidget,10.5\ngizmo,4.25\n",
+    "sales/2026-02.csv": "item,amount\nwidget,7.5\ndoohickey,2.0\n",
+    "sales/2026-03.csv": "item,amount\ngizmo,3.25\nwidget,5.25\n"
+  },
+  "check": {
+    "type": "json_matches",
+    "path": "totals.json",
+    "expected": {
+      "by_item": {
+        "widget": 23.25,
+        "gizmo": 7.5,
+        "doohickey": 2.0
+      },
+      "total": 32.75
+    }
+  }
+}

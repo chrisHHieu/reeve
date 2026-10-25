@@ -1,0 +1,25 @@
+{
+ "id": "decide-in-a-sentence",
+ "mechanism": "show_visual",
+ "prompt": "Vay 1,5 t\u1ef7 trong 20 n\u0103m: g\u00f3i A l\u00e3i c\u1ed1 \u0111\u1ecbnh 9% c\u1ea3 k\u1ef3, g\u00f3i B 7,5% hai n\u0103m \u0111\u1ea7u r\u1ed3i th\u1ea3 n\u1ed5i, m\u00e0 l\u00e3i th\u1ea3 n\u1ed5i m\u1ea5y n\u0103m nay to\u00e0n tr\u00ean 10%. T\u00f4i n\u00ean ch\u1ecdn g\u00f3i n\u00e0o?",
+ "setup": {
+  "notes.md": "# Vay mua nh\u00e0\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "notes.md"
+ ],
+ "answer_mentions": [
+  "g\u00f3i A"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": false
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "notes.md",
+  "contains": "Vay"
+ }
+}

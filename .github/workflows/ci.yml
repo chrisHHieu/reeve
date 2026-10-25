@@ -1,0 +1,75 @@
+# The checks every push and pull request must pass: ruff and the architecture policy, the Python
+# tests, the GUI's type checks and unit tests, and the hermetic Playwright suite (the /v1 API and
+# the WebSocket are mocked, so no model and no network).
+
+name: CI
+
+on: [push, pull_request]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install "ruff>=0.6"
+      - name: Ruff
+        run: ruff check .
+      - name: Architecture policy (size ceiling, import directions, cycles)
+        # Standard library only, nothing to install. The baseline holds what exists already; a NEW
+        # violation (a file over the ceiling, an import that goes up, a cycle) fails here.
+        run: python scripts/architecture_check.py check
+
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e ".[messaging,dev,bedrock]"
+      - name: Test
+        run: pytest tests -q
+
+  gui-unit:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: surfaces/gui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: surfaces/gui/package-lock.json
+      - run: npm ci
+      - name: Typecheck the app
+        run: npx tsc --noEmit
+      - name: Typecheck the desktop shell
+        run: npm run electron:check
+      - name: Unit tests
+        run: npm test
+
+  gui-e2e:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: surfaces/gui
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: surfaces/gui/package-lock.json
+      - run: npm ci
+      - name: Playwright's browser
+        run: npx playwright install --with-deps chromium
+      - name: e2e
+        run: npm run e2e

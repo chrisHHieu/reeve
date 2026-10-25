@@ -1,0 +1,497 @@
+{
+  "version": 1,
+  "violations": [
+    {
+      "detail": "tools must not import orchestration",
+      "file": "harness/tools/task_agents.py",
+      "fingerprint": "031c1304723a4dc4",
+      "note": "harness/orchestration/subagent_external.py, harness/orchestration/subagent_flags.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/interface/server/manager/core.py",
+      "fingerprint": "03230809f2edbbf4",
+      "lines": 1133,
+      "note": "1133 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/interface/server/manager/permission_broker.py",
+      "fingerprint": "03bff931626b97ea",
+      "lines": 423,
+      "note": "423 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/orchestration/remote_env/files.py",
+      "fingerprint": "05a2bb64b03e99a7",
+      "lines": 883,
+      "note": "883 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "interface must not import compose",
+      "file": "harness/interface/server/manager/automation.py",
+      "fingerprint": "05af882f4823556f",
+      "note": "harness/compose/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/llm/providers/catalog.py",
+      "fingerprint": "090fc8c5f2bcf1b1",
+      "lines": 529,
+      "note": "529 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "tools must not import integrations",
+      "file": "harness/tools/task_runtime.py",
+      "fingerprint": "0f3e3f032f8df67d",
+      "note": "harness/integrations/web/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "safety must not import extensions",
+      "file": "harness/safety/boundary/protected.py",
+      "fingerprint": "1564647275755b0c",
+      "note": "harness/extensions/plugins/store.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/connectors/descriptor_data/vendors.py",
+      "fingerprint": "18a08f7bdf78a27c",
+      "lines": 446,
+      "note": "446 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/lsp/manager.py",
+      "fingerprint": "19248a44064c1e39",
+      "lines": 710,
+      "note": "710 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "loop must not import extensions",
+      "file": "harness/loop/hooks_runner.py",
+      "fingerprint": "194ac22284d01108",
+      "note": "harness/extensions/plugins/compat.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "session must not import tools",
+      "file": "harness/session/durability.py",
+      "fingerprint": "19710ab8664f717d",
+      "note": "harness/tools/pipeline.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "config must not import extensions",
+      "file": "harness/config/config/agent_files.py",
+      "fingerprint": "19bab43cea158e70",
+      "note": "harness/extensions/plugins/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/cua_server.py",
+      "fingerprint": "1cfecb5fffb56bff",
+      "lines": 628,
+      "note": "628 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "interface must not import compose",
+      "file": "harness/interface/server/manager/core.py",
+      "fingerprint": "263a240ac071aa96",
+      "note": "harness/compose/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "session must not import safety",
+      "file": "harness/session/project.py",
+      "fingerprint": "26868878575c4e06",
+      "note": "harness/safety/secrets/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "llm must not import tools",
+      "file": "harness/llm/attachment_files.py",
+      "fingerprint": "2785100f7fc8ca5c",
+      "note": "harness/tools/office.py, harness/tools/text_sniff.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "tools must not import context",
+      "file": "harness/tools/history.py",
+      "fingerprint": "310c66e0e842bab2",
+      "note": "harness/context/memory/memory_format.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/program_calls.py",
+      "fingerprint": "3344b02cf190ad52",
+      "lines": 415,
+      "note": "415 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "safety must not import integrations",
+      "file": "harness/safety/permissions/engine.py",
+      "fingerprint": "3771410ebd6bb0be",
+      "note": "harness/integrations/connectors/catalog/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "session must not import orchestration",
+      "file": "harness/session/changes.py",
+      "fingerprint": "415c127a1b82b264",
+      "note": "harness/orchestration/__init__.py, harness/orchestration/worktree_state.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/cards.py",
+      "fingerprint": "45fab0d6eeaccf6d",
+      "lines": 563,
+      "note": "563 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/code_mode.py",
+      "fingerprint": "4b22edd7bfe72c9d",
+      "lines": 735,
+      "note": "735 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/context/compaction/tokens.py",
+      "fingerprint": "4dbaeda6840c93bf",
+      "lines": 584,
+      "note": "584 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "session must not import tools",
+      "file": "harness/session/changes.py",
+      "fingerprint": "51ee9f5db2f9006c",
+      "note": "harness/tools/file_diff.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/lsp/client.py",
+      "fingerprint": "56cdf1813a3e262f",
+      "lines": 827,
+      "note": "827 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/task.py",
+      "fingerprint": "595f024d11a652d8",
+      "lines": 1238,
+      "note": "1238 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/context/memory/auto_memory.py",
+      "fingerprint": "5e7627adaf34e045",
+      "lines": 1020,
+      "note": "1020 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "tools must not import orchestration",
+      "file": "harness/tools/task_runtime.py",
+      "fingerprint": "5f9d2459d3bf2ded",
+      "note": "harness/orchestration/worlds.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/task_agents.py",
+      "fingerprint": "5fab6bbc710c4638",
+      "lines": 1064,
+      "note": "1064 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/testing/fake_ssh.py",
+      "fingerprint": "61e3f03988c249fb",
+      "lines": 581,
+      "note": "581 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "config must not import loop",
+      "file": "harness/config/config/settings.py",
+      "fingerprint": "68ebf5687f5a6db6",
+      "note": "harness/loop/goals.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/observability/metrics.py",
+      "fingerprint": "69a861122d2a8cb2",
+      "lines": 488,
+      "note": "488 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/connectors/tool_builders/gmail_labels.py",
+      "fingerprint": "6d92fe8d389d2ffd",
+      "lines": 753,
+      "note": "753 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "safety must not import integrations",
+      "file": "harness/safety/risk.py",
+      "fingerprint": "6e65e35c2d87f722",
+      "note": "harness/integrations/connectors/catalog/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/tool_batches.py",
+      "fingerprint": "705d1ebfe712c291",
+      "lines": 466,
+      "note": "466 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "context must not import loop",
+      "file": "harness/context/compaction/extraction.py",
+      "fingerprint": "733fcbef18579503",
+      "note": "harness/loop/call_pairs.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "observability must not import integrations",
+      "file": "harness/observability/audit/__init__.py",
+      "fingerprint": "815aacbcb9c3fa01",
+      "note": "harness/integrations/connectors/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "llm must not import orchestration",
+      "file": "harness/llm/providers/live_models/clouds.py",
+      "fingerprint": "82141c86eed70f1b",
+      "note": "harness/orchestration/subagent_external.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/core.py",
+      "fingerprint": "8346626ad1281153",
+      "lines": 532,
+      "note": "532 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "config must not import safety",
+      "file": "harness/config/overrides.py",
+      "fingerprint": "866bb490fc3f938f",
+      "note": "harness/safety/risk.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/orchestration/remote_environments.py",
+      "fingerprint": "881fac5bfecd0383",
+      "lines": 926,
+      "note": "926 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "config must not import safety",
+      "file": "harness/config/config/reading.py",
+      "fingerprint": "896e1218b6ef57d1",
+      "note": "harness/safety/secrets/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "tools must not import context",
+      "file": "harness/tools/memory_admission.py",
+      "fingerprint": "8b57e5743580606c",
+      "note": "harness/context/memory/admission.py, harness/context/memory/auto_memory.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/interface/server/manager/session_roots.py",
+      "fingerprint": "9a445c0297971e5c",
+      "lines": 2731,
+      "note": "2731 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/web/fetch.py",
+      "fingerprint": "a6c747087da12959",
+      "lines": 667,
+      "note": "667 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/connectors/tool_builders/redmine.py",
+      "fingerprint": "b18862c78a2e58da",
+      "lines": 477,
+      "note": "477 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "interface must not import compose",
+      "file": "harness/interface/server/manager/session_roots.py",
+      "fingerprint": "b5750c1cae23cc91",
+      "note": "harness/compose/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "session must not import llm",
+      "file": "harness/session/conversations/rows.py",
+      "fingerprint": "b66d132ca5ab2976",
+      "note": "harness/llm/attachments.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/main_loop.py",
+      "fingerprint": "c1242675dd82e378",
+      "lines": 428,
+      "note": "428 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/goals.py",
+      "fingerprint": "c5444cc781bfa268",
+      "lines": 671,
+      "note": "671 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/orchestration/remote_env/transport.py",
+      "fingerprint": "c5f96bca8c950a65",
+      "lines": 426,
+      "note": "426 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/interface/server/manager/metrics_store.py",
+      "fingerprint": "c810689b8d63a25a",
+      "lines": 896,
+      "note": "896 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/workflow.py",
+      "fingerprint": "c912236e83edf048",
+      "lines": 582,
+      "note": "582 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "tools must not import orchestration",
+      "file": "harness/tools/task.py",
+      "fingerprint": "c9cd8ad90feaaa09",
+      "note": "harness/orchestration/child_changes.py, harness/orchestration/subagent_external.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/connectors/mail/tools.py",
+      "fingerprint": "cca9dbd06183d8b8",
+      "lines": 415,
+      "note": "415 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/connectors/tool_builders/google_workspace.py",
+      "fingerprint": "cf8e2ace508c0d0f",
+      "lines": 763,
+      "note": "763 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/orchestration/subagent_external.py",
+      "fingerprint": "d039d3d9d0dfb827",
+      "lines": 615,
+      "note": "615 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "tools must not import loop",
+      "file": "harness/tools/task_runtime.py",
+      "fingerprint": "d9cb3f63cd7d7cdd",
+      "note": "harness/loop/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/interface/server/manager/reviews.py",
+      "fingerprint": "dc83331cb3ad5d29",
+      "lines": 570,
+      "note": "570 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/extensions/skills/base.py",
+      "fingerprint": "e4045ffd047ec265",
+      "lines": 720,
+      "note": "720 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/loop/compaction.py",
+      "fingerprint": "e4efb92a15325aaf",
+      "lines": 996,
+      "note": "996 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/integrations/lsp/tool.py",
+      "fingerprint": "e68b24c4c438dd7a",
+      "lines": 439,
+      "note": "439 lines",
+      "rule": "max-file-lines"
+    },
+    {
+      "detail": "interface must not import compose",
+      "file": "harness/interface/tui/app.py",
+      "fingerprint": "e96d3aa0a77f95d4",
+      "note": "harness/compose/__init__.py",
+      "rule": "layer-violation"
+    },
+    {
+      "detail": "over the 400-line ceiling",
+      "file": "harness/tools/terminal.py",
+      "fingerprint": "eba768d9b2430a8c",
+      "lines": 1187,
+      "note": "1187 lines",
+      "rule": "max-file-lines"
+    }
+  ]
+}

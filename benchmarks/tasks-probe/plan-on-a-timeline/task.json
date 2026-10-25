@@ -1,0 +1,29 @@
+{
+ "id": "plan-on-a-timeline",
+ "mechanism": "show_visual",
+ "prompt": "D\u1ef1 \u00e1n ra m\u1eaft app c\u1ee7a nh\u00f3m t\u00f4i: kh\u1ea3o s\u00e1t ng\u01b0\u1eddi d\u00f9ng 1/9 \u0111\u1ebfn 19/9, thi\u1ebft k\u1ebf 15/9 \u0111\u1ebfn 10/10, ph\u00e1t tri\u1ec3n 6/10 \u0111\u1ebfn 21/11, ki\u1ec3m th\u1eed 10/11 \u0111\u1ebfn 5/12, ra m\u1eaft ng\u00e0y 8/12/2026. Cho t\u00f4i xem to\u00e0n c\u1ea3nh ti\u1ebfn \u0111\u1ed9, giai \u0111o\u1ea1n n\u00e0o ch\u1ed3ng l\u00ean nhau.",
+ "setup": {
+  "notes.md": "# D\u1ef1 \u00e1n app\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "notes.md"
+ ],
+ "answer_mentions": [
+  "ki\u1ec3m th\u1eed"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": true,
+   "blocks_any": [
+    "timeline"
+   ],
+   "no_restate": true
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "notes.md",
+  "contains": "D\u1ef1 \u00e1n"
+ }
+}

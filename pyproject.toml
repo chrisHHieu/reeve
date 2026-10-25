@@ -1,0 +1,131 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "reeve"
+version = "0.0.0"
+description = "Reeve — a local-first coding agent: a provider-agnostic agent runtime"
+requires-python = ">=3.10"
+dependencies = [
+    # Provider SDKs stop below their next major version. `anthropic>=0.40` once let 1.0 in, which
+    # moved to httpx2 and broke every request on the Anthropic wire (2026-09-24) without a test
+    # noticing. Raising a cap is a change of its own, and it must pass tests/test_provider_wire.py
+    # (the real SDK over a real local socket: text and a tool call, whole and streamed).
+    "openai>=1.0,<4",
+    "anthropic>=0.40,<2",  # the Claude Messages API, natively
+    "google-genai>=1.0,<3",  # Gemini, natively
+    "google-auth>=2.23",  # Vertex credentials: a service account, ADC, or a MaaS bearer
+    "textual>=1.0",
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.27",
+    # aisuite (toolkits, tracing), pinned to a commit until a PyPI release has what is used here;
+    # then it becomes "aisuite>=x.y".
+    "aisuite @ git+https://github.com/andrewyng/aisuite.git@1b4bbf303ec21968230b1ec869a144d054e9b3c4",
+    "docstring_parser",
+    "pyyaml>=6",  # SKILL.md and agent-definition frontmatter
+    "pydantic>=2",
+    # JSON Schema checks for a subagent's output contract (tools/subagent.py imports it). mcp
+    # happened to install it already; a module that imports a package declares it.
+    "jsonschema>=4",
+    # The MCP client (stdio and streamable HTTP). From 1.28.1, past PYSEC-2026-3481/3482/3483
+    # (fixed in 1.27.2 and 1.28.1); below 2, which removed streamablehttp_client.
+    "mcp>=1.28.1,<2",
+    "httpx>=0.27,<1",  # the messaging connectors' outbound sends (send_message)
+    "websockets>=13",  # the managed Slack relay's client (relay_client.py)
+    "ddgs>=9",  # DuckDuckGo, the search that needs no key; Exa goes over httpx
+    # web_fetch's HTML to Markdown (headings, tables and code fences instead of one flat block of
+    # text). Pure Python with no dependencies of its own.
+    "html2text>=2024",
+    "croniter>=2",  # when an automation's cron fires next
+    # PDFs for models that cannot read them (pdf_support.py): pypdf takes the text out in pure
+    # Python, pypdfium2 renders pages (BSD pdfium with its own library; not PyMuPDF, whose AGPL
+    # cannot ship in the DMG).
+    "pypdf>=5",
+    "pypdfium2>=4",
+    # Fitting images to where they go (harness/llm/images.py): a provider refuses an image that is
+    # too large with a 400 in the middle of a turn (Anthropic: about 5 MB or 8000 px), and the
+    # harness shrinks it first, which needs Pillow; without it an image that is too large can
+    # only be refused. Windows gets it through pyautogui (computer-use) and every dev venv has it,
+    # but a module that imports a package declares it, and the macOS build installs no such extra.
+    # MIT-CMU/HPND, fine in the DMG, unlike PyMuPDF.
+    "pillow>=10",
+    # The IANA time zones for zoneinfo. Windows has none of its own, and without them every named
+    # schedule time zone (UTC, Asia/Kolkata, …) would quietly become local time.
+    "tzdata; sys_platform == 'win32'",
+    # A real PTY for the terminal panel on Windows (harness/tools/pty_session.py): pywinpty wraps
+    # ConPTY, as node-pty does. An attribute list written by hand with ctypes ran, but the child
+    # kept the parent's console without a word, which is the class of bug a maintained binding is
+    # for. POSIX uses the standard `pty` module.
+    "pywinpty>=3; sys_platform == 'win32'",
+    # tomllib is in the standard library from 3.11; on 3.10 config.py falls back to tomli.
+    "tomli>=2; python_version < '3.11'",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "pytest-asyncio", "httpx", "ruff>=0.6"]
+# Listening for messages (sending needs only httpx, a core dependency). aiohttp is what slack-bolt's
+# Socket Mode runs on, and FakeSlack's tests drive the real handler, so it is declared rather than
+# left to arrive with something else.
+messaging = ["python-telegram-bot>=21", "slack-bolt>=1.18", "aiohttp>=3.9"]
+# Desktop control: the computer-use MCP sidecar (harness/integrations/cua_server.py). UI
+# Automation is Windows only; the other three work everywhere.
+computer-use = ["uiautomation>=2.0.29; sys_platform == 'win32'", "mss>=9", "pyautogui>=0.9.14", "pyperclip>=1.8"]
+# A personal WhatsApp number linked as a device. Pinned: the client speaks an
+# unofficial protocol, so moving to a new version is a decision, not a refresh. Its dependency
+# `linkpreview` installs a top-level `tests` package that hides this repository's `tests` folder
+# from `import tests.x`, which is why tests here import a sibling as `from test_x import ...`.
+whatsapp = ["neonize==0.5.2"]
+# AWS Bedrock (imported only when used; the desktop builds include it, pip users choose it).
+bedrock = ["boto3>=1.34,<2"]
+
+[project.scripts]
+reeve = "harness.interface.cli:main"
+reeve-server = "harness.interface.server.run:main"
+reeve-connectors = "harness.integrations.connectors.cli:main"
+# The code-mode child (harness/tools/code_child.py) as an entry point of its own: in the frozen
+# sidecar sys.executable is reeve-server.exe, whose argparse rejects `-u -m`, so the build ships
+# this exe beside it to be spawned (packaging/reeve-server.spec, `reeve-code-child`).
+reeve-code-child = "harness.tools.code_child:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["harness*"]
+
+[tool.setuptools.package-data]
+harness = [
+    "modes/personas/builtin/*.md",
+    "modes/personas/builtin/*/manifest.md",
+    "modes/personas/builtin/*/skills/*/SKILL.md",
+    # Country names a `map` visual can resolve, built by scripts/build_world_map.mjs.
+    "tools/visual/countries.json",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Some tests import the repository's scripts/ package, and the pytest console script (CI) does not
+# put the root on sys.path as `python -m pytest` does.
+pythonpath = ["."]
+asyncio_mode = "auto"
+
+# `ruff check .` gates CI (`.github/workflows/ci.yml`), with the half of pyflakes that is nearly
+# always a real bug: undefined names, redefinitions, unused locals, syntax errors. Its first run
+# found an undefined iterator in `lsp/tool.py`, a `plan_dispatch` that called itself in the team
+# tool, and a test file that no longer compiled (cp1252 bytes in a UTF-8 file).
+[tool.ruff]
+# CI runs 3.12 and the venv 3.11; some tests use `ExceptionGroup`, which is 3.11 and later.
+target-version = "py311"
+line-length = 100
+extend-exclude = ["surfaces/gui", "packaging", "docs"]
+
+[tool.ruff.lint]
+select = ["E9", "F"]
+ignore = [
+    # `from .deps import *` is how the engine and the manager share names: every use of one is
+    # F405. Dropping the pattern is a refactor, not a lint fix.
+    "F403", "F405",
+    # About 740 unused imports, mostly the block the route split copied into every
+    # `server/routes/*` module. Removing them deserves a reviewed change of its own, not a
+    # thousand-line `--fix` nobody read.
+    "F401",
+]

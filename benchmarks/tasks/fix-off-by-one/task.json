@@ -1,0 +1,9 @@
+{
+  "id": "fix-off-by-one",
+  "prompt": "pytest in this workspace fails. Fix the code (not the test) until pytest passes. Run pytest to verify before you finish.",
+  "setup": {
+    "total.py": "def total(prices):\n    \"\"\"Sum every price in the list.\"\"\"\n    total = 0\n    for i in range(len(prices) - 1):\n        total += prices[i]\n    return total\n",
+    "test_total.py": "from total import total\n\n\ndef test_total_covers_every_item():\n    assert total([1, 2, 3]) == 6\n\n\ndef test_total_empty():\n    assert total([]) == 0\n"
+  },
+  "check": { "type": "pytest" }
+}

@@ -1,0 +1,412 @@
+/* Visuals under an answer. Colours are the palette's own roles, so every one of the
+   sixteen palettes, light and dark, draws them without a table of its own. Motion is the app's
+   (ui.css): a block fades in once as it arrives, bars grow once, choices crossfade; nothing
+   scales or bounces, and reduced motion makes every change immediate. */
+.vz {
+  --viz-1: var(--accent);
+  --viz-2: var(--warn-ink);
+  --viz-3: var(--teal-ink);
+  --viz-4: var(--ok);
+  --viz-5: var(--danger);
+  --viz-6: var(--syntax-keyword);
+  --viz-7: var(--syntax-property);
+  --viz-8: var(--muted);
+  --viz-9: color-mix(in oklab, var(--accent) 50%, var(--panel));
+  --viz-10: color-mix(in oklab, var(--warn-ink) 50%, var(--panel));
+  display: flex; flex-direction: column; gap: 10px; margin: 6px 0 10px; min-width: 0;
+}
+.vz-block {
+  position: relative; min-width: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+  padding: 12px 14px; box-shadow: var(--elev-1);
+}
+/* A visual inside its answer: a paragraph's breath above and below it, and a hairline frame
+   with no lift, so it reads as part of the prose rather than a card laid on it. Revealed from
+   its step row, a ring fades in and out once. */
+.vz-in-answer > .vz { margin: 12px 0 14px; }
+.vz-in-answer .vz-block { box-shadow: none; transition: box-shadow var(--dur-4) var(--ease-out); }
+.vz-in-answer[data-revealed] .vz-block { box-shadow: 0 0 0 3px var(--accent-soft); }
+@keyframes vz-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.vz[data-streaming] .vz-block { animation: vz-arrive var(--dur-4) var(--ease-out) both; }
+.vz-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 12px; margin-bottom: 10px; }
+/* A block with no title or file keeps only its buttons, floated in its corner: no empty line. */
+.vz-head[data-bare] { position: absolute; top: 6px; right: 8px; z-index: 2; margin: 0; }
+/* There the buttons show only while the block is pointed at, on a plate over what is under them. */
+.vz-head[data-bare] .vz-views, .vz-head[data-bare] .vz-tools { border-radius: 7px; background: var(--glass-strong); }
+.vz-head[data-bare] .vz-views button { opacity: 0; }
+.vz-block:hover > .vz-head[data-bare] .vz-views button, .vz-head[data-bare] .vz-views button:focus-visible { opacity: 1; }
+.vz-head[data-bare] .vz-views:not(:has(button:focus-visible)) { background: none; }
+.vz-block:hover > .vz-head[data-bare] .vz-views { background: var(--glass-strong); }
+.vz-head-end { display: inline-flex; align-items: baseline; gap: 10px; margin-left: auto; min-width: 0; }
+
+/* Export: quiet until the block is hovered or a button is focused, like a table's bar. */
+.vz-tools { display: inline-flex; align-items: center; gap: 2px; min-height: 20px; }
+.vz-tools button {
+  display: inline-flex; align-items: center; gap: 4px; padding: 2px 6px; border: 0; border-radius: 6px;
+  background: none; font: inherit; font-size: 11px; color: var(--faint); cursor: pointer; opacity: 0;
+  transition: opacity var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), background-color var(--dur-2) var(--ease-out);
+}
+.vz-block:hover .vz-tools button, .vz-tools button:focus-visible { opacity: 1; }
+.vz-tools button:hover { color: var(--ink); }
+.vz-tools-said { font-size: 11px; color: var(--ok); animation: ui-fade var(--dur-2) var(--ease-out); }
+.vz-head h4 { margin: 0; font-size: 13.5px; font-weight: 600; color: var(--ink); text-wrap: balance; }
+.vz-source { font-size: 11.5px; color: var(--faint); max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Table / visual and Open larger: always there, quiet until the block is pointed at. */
+.vz-views { display: inline-flex; align-items: center; gap: 2px; }
+.vz-views button {
+  display: inline-grid; place-items: center; width: 24px; height: 22px; padding: 0; border: 0; border-radius: 6px;
+  background: none; color: var(--faint); cursor: pointer; opacity: .6;
+  transition: opacity var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), background-color var(--dur-2) var(--ease-out);
+}
+.vz-block:hover .vz-views button, .vz-views button:focus-visible { opacity: 1; }
+.vz-views button:hover { color: var(--ink); }
+.vz-views button[aria-pressed="true"] { color: var(--accent); opacity: 1; }
+.vz-table-view { animation: ui-fade var(--dur-3) var(--ease-out); }
+
+/* Open larger: the block over a scrim, wide enough to explore, fading in. */
+.vz-expanded {
+  position: fixed; inset: 0; z-index: 80; display: grid; place-items: center; padding: 32px;
+  background: var(--scrim); animation: ui-fade var(--dur-3) var(--ease-out);
+}
+.vz-expanded-stage { position: relative; width: min(1180px, 100%); max-height: calc(100vh - 64px); overflow: auto; margin: 0; }
+.vz-expanded-stage .vz-block { padding: 18px 22px; box-shadow: var(--elev-3, var(--elev-2)); }
+.vz-expanded-stage .vz-head { padding-right: 36px; }
+.vz-expanded-close {
+  position: absolute; top: 12px; right: 12px; z-index: 3; display: grid; place-items: center; width: 28px; height: 28px;
+  border: 0; border-radius: 8px; background: none; color: var(--muted); cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
+}
+.vz-expanded-close:hover { color: var(--ink); }
+
+/* Placeholder while a file is read or the first block is still being written: it breathes. */
+@keyframes vz-breathe { from { opacity: .5; } to { opacity: 1; } }
+.vz-pending {
+  min-height: 64px; display: grid; place-items: center; border-radius: 8px;
+  background: var(--paper); color: var(--faint); font-size: 12px;
+  animation: vz-breathe 1.4s var(--ease-in-out) infinite alternate;
+}
+.vz-pending-first { margin: 6px 0 10px; min-height: 96px; }
+
+/* Ranked bars */
+/* One grid for every row (subgrid), so each bar's track starts and ends at the same x whatever
+   the length of its value. */
+.vz-bars { display: grid; grid-template-columns: minmax(70px, 28%) minmax(0, 1fr) max-content; row-gap: 2px; }
+.vz-bar {
+  grid-column: 1 / -1; display: grid; grid-template-columns: subgrid; align-items: center; column-gap: 10px;
+  padding: 5px 6px; border: 0; border-radius: 8px; background: none; color: var(--ink);
+  font: inherit; text-align: left; cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+.vz-bar:hover { color: var(--ink); }
+.vz-bar[aria-pressed="true"] { background: var(--accent-soft); }
+.vz-bar-label { font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vz-bar-track { height: 10px; border-radius: 4px; background: var(--paper); overflow: hidden; }
+@keyframes vz-fill { from { width: 0; } }
+.vz-bar-fill {
+  display: block; height: 100%; border-radius: 4px; background: var(--viz-1);
+  animation: vz-fill 700ms var(--ease-out) both;
+  transition: width var(--dur-3) var(--ease-out), opacity var(--dur-3) var(--ease-out);
+}
+.vz-bar-fill[data-negative] { background: var(--danger); }
+.vz-bars[data-picked] .vz-bar:not([aria-pressed="true"]) .vz-bar-fill { opacity: .35; }
+.vz-bar-value { font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; text-align: right; }
+.vz-bar-share { color: var(--faint); }
+
+/* Axis charts */
+.vz-chart { min-width: 0; }
+.vz-plot { position: relative; }
+.vz-svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; user-select: none; -webkit-user-select: none; }
+/* Where two compared lines cross: a dashed rule and the x it falls at, quieter than the lines. */
+.vz-cross line { stroke: var(--line-strong); stroke-dasharray: 2 3; }
+.vz-cross text { fill: var(--muted); font: 500 10.5px var(--sans); font-variant-numeric: tabular-nums; }
+.vz-grid { stroke: var(--line); stroke-width: 1; }
+.vz-zero { stroke: var(--line-strong); stroke-width: 1; }
+.vz-tick { fill: var(--faint); font: 10.5px var(--sans); font-variant-numeric: tabular-nums; }
+.vz-hover line { stroke: var(--line-strong); stroke-dasharray: 3 3; }
+.vz-group { transition: opacity var(--dur-2) var(--ease-out); }
+.vz-group[data-dim] { opacity: .4; }
+.vz-readout {
+  position: absolute; top: 4px; transform: translateX(10px); pointer-events: none;
+  display: flex; flex-direction: column; gap: 2px; min-width: 120px; max-width: 320px;
+  padding: 6px 9px; border-radius: 8px; background: var(--panel); border: 1px solid var(--line);
+  box-shadow: var(--elev-2); font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums;
+  animation: ui-fade var(--dur-2) var(--ease-out);
+}
+.vz-readout[data-flip] { transform: translateX(calc(-100% - 10px)); }
+.vz-readout b { color: var(--ink); font-weight: 600; }
+.vz-readout span { display: flex; align-items: center; gap: 6px; white-space: nowrap; }
+.vz-readout span[data-quiet] { opacity: .55; }
+.vz-readout .vz-readout-total { margin-top: 2px; padding-top: 3px; border-top: 1px solid var(--line); color: var(--ink); font-weight: 600; }
+.vz-readout i, .vz-legend i, .vz-legend-list i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; flex: none; }
+.vz-legend { display: flex; flex-wrap: wrap; gap: 2px 4px; margin-bottom: 6px; font-size: 12px; color: var(--muted); min-width: 0; }
+.vz-legend span { display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; }
+/* A legend that hides and shows: each name a quiet button, a hidden one faded with a hollow key. */
+.vz-legend button {
+  display: inline-flex; align-items: center; gap: 6px; padding: 2px 6px; border: 0; border-radius: 6px;
+  background: none; font: inherit; color: var(--muted); cursor: pointer;
+  transition: color var(--dur-2) var(--ease-out), background-color var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
+}
+.vz-legend button:hover { color: var(--ink); }
+.vz-legend button[aria-pressed="false"] { opacity: .45; }
+.vz-legend button[aria-pressed="false"] i { background: none !important; box-shadow: inset 0 0 0 1.5px var(--faint); }
+.vz-chart-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.vz-chart-head .vz-legend { flex: 1; }
+.vz-mode { display: inline-flex; flex: none; padding: 2px; border-radius: 7px; background: var(--paper); }
+.vz-mode button {
+  padding: 2px 8px; border: 0; border-radius: 5px; background: none; font: inherit; font-size: 11.5px;
+  color: var(--muted); cursor: pointer; transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out);
+}
+.vz-mode button[aria-checked="true"] { background: var(--panel); color: var(--ink); box-shadow: var(--elev-1); }
+/* Marks: a line draws itself once, an area and columns follow it in; a series the pointer is not
+   on steps back while the legend points at one. */
+@keyframes vz-draw { from { stroke-dashoffset: 1; } to { stroke-dashoffset: 0; } }
+@keyframes vz-rise { from { transform: scaleY(0); } }
+@keyframes vz-in { from { opacity: 0; } }
+.vz-line { stroke-dasharray: 1; stroke-dashoffset: 0; animation: vz-draw 900ms var(--ease-out) both; transition: opacity var(--dur-2) var(--ease-out), stroke-width var(--dur-2) var(--ease-out); }
+.vz-area { opacity: .1; animation: vz-in 900ms var(--ease-out) both; transition: opacity var(--dur-2) var(--ease-out); }
+.vz-dots { animation: vz-in 600ms var(--ease-out) 500ms both; transition: opacity var(--dur-2) var(--ease-out); }
+.vz-dots circle { stroke: var(--panel); stroke-width: 1.2; }
+.vz-col { transform-box: fill-box; transform-origin: 50% 100%; animation: vz-rise 600ms var(--ease-out) both; transition: opacity var(--dur-2) var(--ease-out); }
+.vz-line[data-dim], .vz-dots[data-dim], .vz-col[data-dim] { opacity: .22; }
+.vz-area[data-dim] { opacity: .03; }
+/* Looking closer: drag across a line chart, a soft band follows; "Show all" brings the rest back. */
+.vz-svg[data-zoomable] { cursor: crosshair; }
+.vz-brush { fill: var(--accent-soft); stroke: var(--accent); stroke-opacity: .4; stroke-width: 1; }
+.vz-zoom-reset {
+  position: absolute; top: 0; right: 14px; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line-strong);
+  background: var(--panel); color: var(--muted); font: 500 11.5px var(--sans); cursor: pointer;
+  animation: ui-fade var(--dur-2) var(--ease-out); transition: color var(--dur-2) var(--ease-out);
+}
+.vz-zoom-reset:hover { color: var(--accent); }
+
+/* Donut */
+.vz-donut { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.vz-donut-svg { width: 160px; height: 160px; flex: none; }
+.vz-slice { cursor: pointer; transition: opacity var(--dur-2) var(--ease-out), d var(--dur-3) var(--ease-out); }
+.vz-slice[data-dim] { opacity: .35; }
+.vz-donut-total { fill: var(--ink); font: 600 15px var(--sans); font-variant-numeric: tabular-nums; }
+.vz-legend-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; flex: 1 1 200px; min-width: 0; }
+.vz-legend-list button {
+  width: 100%; display: flex; align-items: center; gap: 8px; padding: 4px 6px; border: 0; border-radius: 6px;
+  background: none; color: var(--ink); font: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+.vz-legend-list button:hover { color: var(--ink); }
+.vz-legend-list button[aria-pressed="true"] { background: var(--accent-soft); }
+.vz-legend-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.vz-legend-value { color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+/* Metrics */
+.vz-metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 8px; }
+.vz-metric { display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px; background: var(--paper); min-width: 0; }
+.vz-metric-label { font-size: 11.5px; color: var(--muted); }
+.vz-metric-value { font-size: 17px; font-weight: 600; letter-spacing: -.01em; color: var(--ink); font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.vz-metric-note { font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px; }
+.vz-metric-delta { font-weight: 600; color: var(--ink); }
+.vz-metric-source { font-family: var(--mono); font-size: 10.5px; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Compare */
+.vz-compare-scroll { overflow-x: auto; }
+.vz-compare { width: 100%; border-collapse: collapse; font-size: 13px; }
+.vz-compare th, .vz-compare td { padding: 8px 10px; text-align: left; vertical-align: top; border-bottom: 1px solid var(--line); }
+.vz-compare thead th { border-bottom-color: var(--line-strong); }
+.vz-compare tbody th { font-weight: 500; color: var(--muted); white-space: nowrap; }
+.vz-compare [data-best] { background: var(--ok-soft); }
+.vz-compare-name { display: block; font-weight: 600; color: var(--ink); }
+.vz-compare-note { display: block; font-weight: 400; font-size: 11.5px; color: var(--muted); }
+
+/* Table */
+.vz-table-filter { margin-bottom: 8px; }
+.vz-table-scroll { overflow-x: auto; max-height: 480px; overflow-y: auto; border: 1px solid var(--line); border-radius: 8px; }
+.vz-table-more {
+  display: block; width: 100%; margin-top: 4px; padding: 5px 0; border: 0; border-radius: 6px; background: none;
+  font: inherit; font-size: 12px; color: var(--muted); cursor: pointer;
+  transition: color var(--dur-2) var(--ease-out), background-color var(--dur-2) var(--ease-out);
+}
+.vz-table-more:hover { color: var(--accent); }
+.vz-table table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+.vz-table th, .vz-table td { padding: 6px 10px; text-align: left; border-bottom: 1px solid var(--line); white-space: nowrap; }
+.vz-table th {
+  position: sticky; top: 0; z-index: 1; background: var(--paper); color: var(--muted); font-weight: 600;
+  cursor: pointer; user-select: none; transition: color var(--dur-2) var(--ease-out);
+}
+.vz-table th:hover { color: var(--accent); }
+.vz-table th:hover .md-sort-arrow { opacity: .45; }
+.vz-table th[aria-sort="ascending"] .md-sort-arrow, .vz-table th[aria-sort="descending"] .md-sort-arrow { opacity: 1; }
+.vz-table th[aria-sort="descending"] .md-sort-arrow { transform: rotate(180deg); }
+.vz-table tbody tr { background: var(--panel); }
+.vz-table tbody td { transition: background-color var(--dur-2) var(--ease-out); }
+.vz-table tbody tr:hover td { background: var(--accent-soft); }
+.vz-table .vz-num { text-align: right; }
+.vz-table-status { display: flex; flex-wrap: wrap; gap: 4px 14px; margin-top: 6px; font-size: 12px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vz-table-status b { color: var(--ink); font-weight: 600; }
+
+/* What-if */
+.vz-sliders { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 10px 18px; margin-bottom: 12px; }
+.vz-slider { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vz-slider-head { display: flex; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.vz-slider-head output { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+/* A thin track filled up to the thumb (`--fill`, set as the value moves) and a small thumb: the
+   browser's own range is heavier than the text around it. */
+.vz-slider input[type="range"] {
+  -webkit-appearance: none; appearance: none; width: 100%; height: 16px; margin: 0; background: none; cursor: pointer;
+}
+.vz-slider input[type="range"]::-webkit-slider-runnable-track {
+  height: 4px; border-radius: 2px;
+  background: linear-gradient(to right, var(--accent) var(--fill, 0%), var(--line-strong) var(--fill, 0%));
+}
+.vz-slider input[type="range"]::-moz-range-track { height: 4px; border-radius: 2px; background: var(--line-strong); }
+.vz-slider input[type="range"]::-moz-range-progress { height: 4px; border-radius: 2px; background: var(--accent); }
+.vz-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none; appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%;
+  background: var(--panel); border: 2px solid var(--accent); box-shadow: var(--elev-1);
+  transition: box-shadow var(--dur-2) var(--ease-out);
+}
+.vz-slider input[type="range"]::-moz-range-thumb {
+  width: 10px; height: 10px; border-radius: 50%; background: var(--panel); border: 2px solid var(--accent);
+}
+.vz-slider input[type="range"]:hover::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-soft); }
+.vz-slider input[type="range"]:focus-visible { outline: none; }
+.vz-slider input[type="range"]:focus-visible::-webkit-slider-thumb { box-shadow: 0 0 0 4px var(--accent-soft); }
+.vz-outputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 8px; margin-bottom: 10px; }
+.vz-output {
+  display: flex; flex-direction: column; gap: 2px; padding: 8px 10px; border-radius: 8px;
+  background: var(--paper); border: 1px solid transparent;
+  transition: background-color var(--dur-3) var(--ease-out), border-color var(--dur-3) var(--ease-out);
+}
+.vz-output[data-best] { background: var(--ok-soft); border-color: var(--ok-line); }
+.vz-output-label { font-size: 11.5px; color: var(--muted); }
+.vz-output-value { font-size: 17px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+/* Timeline: a label column and a track; ticks above, faint rules down the body, today dashed.
+   Zoomed in, the body pans under a drag; anything past the window is cut by the track. */
+.vz-timeline { --tl-label: min(34%, 240px); position: relative; font-size: 12.5px; }
+.vz-tl-tools { display: flex; align-items: center; gap: 4px; }
+.vz-tl-tools button {
+  min-width: 24px; height: 22px; padding: 0 8px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel);
+  font: 500 12px var(--sans); color: var(--muted); cursor: pointer;
+  transition: color var(--dur-2) var(--ease-out), background-color var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
+}
+.vz-tl-tools button:hover:not(:disabled) { color: var(--ink); }
+.vz-tl-tools button:disabled { opacity: .4; cursor: default; }
+.vz-tl-row { display: grid; grid-template-columns: var(--tl-label) minmax(0, 1fr); align-items: center; min-height: 26px; }
+.vz-tl-axis { min-height: 26px; margin-bottom: 2px; }
+.vz-tl-track { position: relative; height: 100%; min-height: inherit; overflow: hidden; }
+.vz-tl-axis .vz-tl-track { overflow: visible; }
+.vz-tl-tick {
+  position: absolute; top: 50%; transform: translate(-50%, -50%); white-space: nowrap;
+  font-size: 10.5px; color: var(--faint); font-variant-numeric: tabular-nums;
+}
+.vz-tl-body { position: relative; user-select: none; }
+.vz-tl-body[data-pannable] { cursor: grab; }
+.vz-tl-body[data-dragging] { cursor: grabbing; }
+.vz-tl-lines { position: absolute; top: 0; bottom: 0; left: var(--tl-label); right: 0; overflow: hidden; pointer-events: none; }
+.vz-tl-grid { position: absolute; top: 0; bottom: 0; width: 0; border-left: 1px solid var(--line); }
+.vz-tl-today { position: absolute; top: -2px; bottom: 0; width: 0; border-left: 1px dashed var(--danger); opacity: .6; }
+.vz-tl-group + .vz-tl-group { margin-top: 6px; }
+.vz-tl-group-name { font-size: 11.5px; font-weight: 600; color: var(--muted); padding: 4px 0 2px; }
+.vz-tl-label {
+  padding-right: 12px; color: var(--ink); line-height: 1.3; overflow: hidden;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+}
+@keyframes vz-span { from { transform: scaleX(0); } }
+.vz-tl-bar {
+  position: absolute; top: 50%; height: 10px; min-width: 3px; margin-top: -5px; border-radius: 4px;
+  transform-origin: 0 50%; animation: vz-span 600ms var(--ease-out) both; cursor: default;
+  transition: filter var(--dur-2) var(--ease-out);
+}
+.vz-tl-bar:hover { filter: brightness(1.08) saturate(1.1); }
+.vz-tl-milestone { position: absolute; top: 50%; display: inline-flex; align-items: center; gap: 6px; transform: translate(-4.5px, -50%); }
+.vz-tl-milestone[data-flip] { flex-direction: row-reverse; transform: translate(calc(-100% + 4.5px), -50%); }
+.vz-tl-mark { flex: none; width: 9px; height: 9px; border-radius: 2px; transform: rotate(45deg); }
+.vz-tl-mark-date { font-size: 10.5px; color: var(--muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.vz-tl-row[data-done] .vz-tl-label { color: var(--muted); }
+.vz-tl-row[data-done] .vz-tl-bar, .vz-tl-row[data-done] .vz-tl-mark { opacity: .4; }
+.vz-tl-readout { top: 0; transform: translate(14px, -50%); }
+.vz-tl-readout[data-flip] { transform: translate(calc(-100% - 14px), -50%); }
+.vz-readout .vz-tl-note { color: var(--ink); white-space: normal; }
+
+/* Map: the full width of its frame, a calm corner radius, MapLibre's controls in the app's terms. */
+.vz-map-frame { position: relative; height: 340px; border-radius: 8px; overflow: hidden; background: var(--canvas); border: 1px solid var(--line); }
+.vz-map-frame[data-expanded] { height: min(72vh, 720px); }
+/* Sized, not positioned: MapLibre makes its container `position: relative`, which an absolute
+   inset gave a height of 0. */
+.vz-map-canvas { width: 100%; height: 100%; }
+.vz-map-canvas .maplibregl-canvas { outline: none; }
+.vz-map-failed { position: absolute; inset: 0; display: grid; place-items: center; font-size: 12px; color: var(--faint); }
+.vz-map-reset {
+  position: absolute; left: 10px; bottom: 10px; z-index: 2; padding: 4px 10px; border-radius: 999px;
+  border: 1px solid var(--line-strong); background: var(--glass-strong); color: var(--ink);
+  font: 500 12px var(--sans); cursor: pointer; box-shadow: var(--elev-1); animation: ui-fade var(--dur-3) var(--ease-out);
+  transition: background-color var(--dur-2) var(--ease-out);
+}
+.vz-map-reset:hover { color: var(--ink); }
+.vz-map .maplibregl-ctrl-group { background: var(--glass-strong); border-radius: 8px; box-shadow: var(--elev-1); border: 1px solid var(--line); }
+.vz-map .maplibregl-ctrl-group button + button { border-top-color: var(--line); }
+.vz-map .maplibregl-ctrl.maplibregl-ctrl-attrib, .vz-map .maplibregl-ctrl.maplibregl-ctrl-attrib.maplibregl-compact-show {
+  font: 10px var(--sans); background: var(--glass-strong); color: var(--muted);
+}
+:root[data-theme="dark"] .vz-map .maplibregl-ctrl-attrib-button { filter: invert(1); }
+.vz-map .maplibregl-ctrl-attrib a { color: var(--muted); }
+.vz-map .maplibregl-cooperative-gesture-screen { font: 500 13px var(--sans); background: var(--scrim); }
+:root[data-theme="dark"] .vz-map .maplibregl-ctrl-group button .maplibregl-ctrl-icon { filter: invert(1) hue-rotate(180deg); }
+/* A place: a dot with its name beside it, the name on a soft plate so it reads over any street. */
+.vz-pin {
+  display: inline-flex; align-items: center; gap: 6px; padding: 0; border: 0; background: none;
+  cursor: pointer; font: 500 12px var(--sans); color: var(--ink);
+}
+.vz-pin-dot {
+  flex: none; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+  transition: box-shadow var(--dur-2) var(--ease-out);
+}
+.vz-pin:hover .vz-pin-dot { box-shadow: 0 0 0 4px var(--accent-soft), 0 1px 3px rgba(0, 0, 0, .25); }
+.vz-pin-label {
+  display: none; padding: 2px 7px; border-radius: 6px; background: var(--glass-strong); border: 1px solid var(--line);
+  box-shadow: var(--elev-1); white-space: nowrap; max-width: 220px; overflow: hidden; text-overflow: ellipsis;
+}
+.vz-pin[data-labelled] .vz-pin-label { display: inline-block; }
+.vz-map-readout { z-index: 3; transform: translate(14px, -50%); }
+.vz-map-legend { display: flex; justify-content: center; align-items: center; gap: 8px; margin-top: 6px; font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vz-map-small { margin-top: 6px; text-align: center; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.vz-map-legend i {
+  flex: 0 1 160px; height: 6px; border-radius: 3px;
+  background: linear-gradient(to right, color-mix(in srgb, var(--viz-1) 18%, var(--panel)), var(--viz-1));
+}
+
+/* Form */
+.vz-form fieldset { border: 0; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px 14px; min-width: 0; }
+.vz-field { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.vz-field[data-wide] { grid-column: 1 / -1; }
+.vz-field-label { font-size: 12px; font-weight: 500; color: var(--muted); }
+.vz-form select, .vz-form input[type="text"], .vz-form input[type="number"], .vz-form textarea {
+  font: inherit; font-size: 13px; color: var(--ink); background: var(--canvas);
+  border: 1px solid var(--line-strong); border-radius: 8px; padding: 6px 9px; min-width: 0;
+  transition: border-color var(--dur-2) var(--ease-out);
+}
+.vz-form select:focus, .vz-form input:focus, .vz-form textarea:focus { outline: none; border-color: var(--accent); }
+.vz-choices { display: flex; flex-wrap: wrap; gap: 6px 16px; }
+.vz-check { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--ink); }
+.vz-check input { accent-color: var(--accent); }
+.vz-form[data-sent] fieldset { opacity: .6; transition: opacity var(--dur-3) var(--ease-out); }
+.vz-form-foot { display: flex; justify-content: flex-end; margin-top: 12px; }
+.vz-submit {
+  font: 500 13px var(--sans); color: var(--canvas); background: var(--accent); border: 1px solid var(--accent);
+  border-radius: 8px; padding: 7px 14px; cursor: pointer;
+  transition: box-shadow var(--dur-2) var(--ease-out), opacity var(--dur-2) var(--ease-out);
+}
+.vz-submit:hover { box-shadow: inset 0 0 0 999px rgba(255, 255, 255, .08); }
+.vz-submit:disabled { opacity: .45; cursor: default; }
+.vz-form-sent { font-size: 12px; color: var(--ok); animation: ui-fade var(--dur-3) var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .vz *, .vz { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; }
+}
+
+/* In the person's bubble: the visuals they had moved, as the message carried them to the model. */
+.bubble-visual-states { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 4px; margin-top: 6px; white-space: normal; }
+.bubble-visual-state {
+  display: inline-flex; align-items: baseline; gap: 5px; max-width: 100%; padding: 2px 8px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--line); font-size: 11.5px; color: var(--muted);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.bubble-visual-state b { color: var(--accent); font-weight: 600; }

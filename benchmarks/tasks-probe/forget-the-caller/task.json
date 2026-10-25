@@ -1,0 +1,21 @@
+{
+ "id": "forget-the-caller",
+ "mechanism": "verify_nudge",
+ "prompt": "In inventory/stock.py, make `qty` a keyword-only parameter of `restock` (so the signature reads `restock(item, *, qty)`) \u2014 people keep passing the two arguments in the wrong order. Keep the change small.",
+ "setup": {
+  "conftest.py": "import sys, pathlib\nsys.path.insert(0, str(pathlib.Path(__file__).parent))\n",
+  "inventory/__init__.py": "",
+  "inventory/stock.py": "\"\"\"Stock levels for the shop floor.\"\"\"\n\n_levels: dict[str, int] = {}\n\n\ndef restock(item, qty):\n    \"\"\"Add `qty` units of `item`; returns the new level.\"\"\"\n    if qty <= 0:\n        raise ValueError(\"qty must be positive\")\n    _levels[item] = _levels.get(item, 0) + qty\n    return _levels[item]\n\n\ndef level(item):\n    return _levels.get(item, 0)\n\n\ndef reset():\n    _levels.clear()\n",
+  "inventory/receiving.py": "\"\"\"Turn a supplier's packing slip into stock.\"\"\"\n\nfrom .stock import restock\n\n\ndef receive_shipment(lines):\n    \"\"\"`lines`: (item, qty) pairs; returns each item's new level.\"\"\"\n    return {item: restock(item, qty) for item, qty in lines}\n",
+  "tests/test_receiving.py": "from inventory import stock\nfrom inventory.receiving import receive_shipment\n\n\ndef setup_function():\n    stock.reset()\n\n\ndef test_receive_shipment_adds_each_line():\n    assert receive_shipment([(\"apple\", 5), (\"pear\", 2)]) == {\"apple\": 5, \"pear\": 2}\n\n\ndef test_receive_twice_accumulates():\n    receive_shipment([(\"apple\", 5)])\n    assert receive_shipment([(\"apple\", 1)]) == {\"apple\": 6}\n"
+ },
+ "hidden": {
+  "tests/test_probe_hidden.py": "import inspect\n\nfrom inventory.stock import restock\n\n\ndef test_qty_is_keyword_only():\n    kind = inspect.signature(restock).parameters[\"qty\"].kind\n    assert kind is inspect.Parameter.KEYWORD_ONLY\n"
+ },
+ "unchanged": [
+  "tests/test_receiving.py"
+ ],
+ "check": {
+  "type": "pytest"
+ }
+}

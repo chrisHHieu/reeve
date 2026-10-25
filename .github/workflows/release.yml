@@ -1,0 +1,158 @@
+# The desktop installers: macOS (.dmg, Apple Silicon and Intel) and Windows (NSIS .exe), with the
+# Electron shell.
+#
+# The work is done by the scripts a developer runs by hand, packaging/build_dmg.sh and
+# packaging/build_windows.ps1. This workflow only provides their tools (Node, Rust for the
+# dictation host, a .venv with PyInstaller) and publishes what they make.
+#
+#   push a tag `v*`   all targets are built and attached to a DRAFT GitHub Release, published by
+#                     hand once someone has looked at it
+#   run it by hand    the builds are kept as workflow artifacts; no release
+#
+# Every installer goes up twice: under its versioned name, and under a name that never changes
+# (Reeve-macos-arm64.dmg, …), so a website can link to
+#   github.com/<repo>/releases/latest/download/<stable-name>
+# forever. The update manifests (latest.yml, latest-mac.yml) name the versioned files and keep
+# their own names.
+#
+# macOS signing and notarizing happen in build_dmg.sh (a throwaway keychain, the sidecar signed,
+# electron-builder signing the app with the hardened runtime, the .dmg notarized and stapled),
+# driven by these repository secrets:
+#   APPLE_CERTIFICATE            the Developer ID Application certificate and key, as a base64 .p12
+#   APPLE_CERTIFICATE_PASSWORD   the password the .p12 was exported with
+#   APPLE_SIGNING_IDENTITY       e.g. "Developer ID Application: Name (TEAMID)"
+#   APPLE_API_KEY_CONTENT        the App Store Connect API key (.p8) for notarytool, base64
+#   APPLE_API_KEY                that key's id
+#   APPLE_API_ISSUER             its issuer id
+# Without them (a fork, a scratch run) the .dmg is unsigned and installs after `xattr -cr`.
+# Windows is unsigned for now (Authenticode later).
+
+name: Release
+
+on:
+  push:
+    tags: ["v*", "app-v*"]
+  workflow_dispatch:
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: macos-latest, slug: macos-arm64 }
+          # The sidecar is a PyInstaller freeze, which cannot cross-compile, so Intel builds on an
+          # Intel runner: macos-15-intel took over from macos-13 (retired December 2025) and is
+          # the last x86_64 image Actions offers (until August 2027).
+          - { os: macos-15-intel, slug: macos-x64 }
+          - { os: windows-latest, slug: windows }
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: surfaces/gui/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: stt
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: The build venv (.venv)
+        # What the build scripts expect: the package and PyInstaller in .venv. typer and tzdata
+        # matter only while freezing (PyInstaller imports mcp.cli, which needs typer; tzdata
+        # carries zoneinfo on Windows). `computer-use` freezes the Windows desktop sidecar; on
+        # macOS its win32-only dependencies are skipped and no CUA exe is built. aisuite is an
+        # ordinary dependency, pinned to a git commit in pyproject.toml.
+        run: |
+          python -m venv .venv
+          if [ "$RUNNER_OS" = "Windows" ]; then PY=.venv/Scripts/python; else PY=.venv/bin/python; fi
+          "$PY" -m pip install --upgrade pip
+          "$PY" -m pip install -e ".[bedrock,computer-use]" pyinstaller typer tzdata
+          "$PY" -c "import aisuite, harness"  # stop now if either cannot be imported
+
+      - name: npm ci
+        working-directory: surfaces/gui
+        run: npm ci
+
+      - name: Build .dmg (macOS)
+        if: runner.os == 'macOS'
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          APPLE_API_KEY_CONTENT: ${{ secrets.APPLE_API_KEY_CONTENT }}
+          APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
+          APPLE_API_ISSUER: ${{ secrets.APPLE_API_ISSUER }}
+        run: |
+          # A secret that is not set arrives as an empty variable; unset, so the build is cleanly
+          # unsigned instead of half signed.
+          for name in APPLE_CERTIFICATE APPLE_CERTIFICATE_PASSWORD APPLE_SIGNING_IDENTITY APPLE_API_KEY APPLE_API_ISSUER; do
+            [ -n "$(eval echo "\${$name:-}")" ] || unset "$name"
+          done
+          if [ -n "${APPLE_API_KEY_CONTENT:-}" ]; then
+            echo "$APPLE_API_KEY_CONTENT" | base64 -d > "$RUNNER_TEMP/AuthKey.p8"
+            export APPLE_API_KEY_PATH="$RUNNER_TEMP/AuthKey.p8"
+          fi
+          unset APPLE_API_KEY_CONTENT
+          bash packaging/build_dmg.sh
+
+      - name: Build NSIS .exe (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: ./packaging/build_windows.ps1
+
+      - name: Gather what to upload (versioned and stable names)
+        run: |
+          mkdir -p out
+          built=surfaces/gui/release
+          if [ "$RUNNER_OS" = "Windows" ]; then
+            cp "$built"/Reeve-Setup-*.exe out/
+            cp "$built"/Reeve-Setup-*.exe out/Reeve-windows-setup.exe
+            # For updates: the manifest, and the blockmap that lets an update download only what changed.
+            cp "$built"/latest.yml out/
+            cp "$built"/Reeve-Setup-*.exe.blockmap out/ 2>/dev/null || true
+          else
+            cp "$built"/*.dmg out/
+            cp "$built"/*.dmg out/Reeve-${{ matrix.slug }}.dmg
+            # A macOS update installs the .zip. Each runner's manifest is merged in the release job.
+            cp "$built"/*.zip out/
+            cp "$built"/latest-mac.yml out/latest-mac-${{ matrix.slug }}.yml
+          fi
+          ls -la out
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.slug }}
+          path: out/*
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: The tag names the app's version; one macOS update manifest
+        run: |
+          python3 -m pip install --quiet pyyaml
+          python3 scripts/release_manifests.py "${GITHUB_REF_NAME}" dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          draft: true
+          files: dist/*
+          generate_release_notes: true

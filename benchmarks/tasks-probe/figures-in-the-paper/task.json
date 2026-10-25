@@ -1,0 +1,20 @@
+{
+ "id": "figures-in-the-paper",
+ "mechanism": "web_search_description",
+ "prompt": "For our harness design doc I need three figures, each from its own paper, with the paper's arXiv link:\n1. \"An Empirical Study of Harness Design for Coding Agents\": Nemotron-3 30B's success rate on SWE-Bench Verified at a 128K context window with the T4 context strategy and planning turned off.\n2. \"Context as a Tool: Context Management for Long-Horizon SWE-Agents\": the solved rate of the Threshold-Compression Agent baseline on SWE-bench Verified.\n3. \"Sculptor: Empowering LLMs with Cognitive Agency via Active Context Management\": GPT-4.1's PI-LLM score with the ACM tools at 16 updates (4K tokens of context).\nAdd one line per paper to reading-notes.md (title, link, the figure) and give me the three figures in your answer.",
+ "setup": {
+  "reading-notes.md": "# Reading notes\n\n"
+ },
+ "hidden": {},
+ "unchanged": [],
+ "answer_mentions": [
+  "13.6",
+  "53.8",
+  "93.04"
+ ],
+ "check": {
+  "type": "file_contains",
+  "path": "reading-notes.md",
+  "contains": "2512.22087"
+ }
+}

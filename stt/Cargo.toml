@@ -1,0 +1,18 @@
+[package]
+name = "reeve-stt"
+version = "0.1.0"
+description = "Local, offline speech-to-text engine for Reeve hosts"
+edition = "2021"
+rust-version = "1.77"
+license = "MIT"
+
+[dependencies]
+cpal = "0.15.3"  # the microphone
+serde = { version = "1", features = ["derive"] }
+# The JSON lines `reeve-stt-host` speaks to the Electron shell.
+serde_json = "1"
+sha2 = "0.10"  # a downloaded model is checked against its published hash
+ureq = "2.12"  # and downloaded with this
+# No Metal feature: the engine has to run on macOS releases older than the Metal APIs it
+# would use. A Metal build can be offered once the app states a minimum macOS it is checked on.
+whisper-rs = "0.16"

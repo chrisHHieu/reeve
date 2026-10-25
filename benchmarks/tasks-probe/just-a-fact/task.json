@@ -1,0 +1,25 @@
+{
+ "id": "just-a-fact",
+ "mechanism": "show_visual",
+ "prompt": "Th\u1ee7 \u0111\u00f4 c\u1ee7a \u00dac l\u00e0 th\u00e0nh ph\u1ed1 n\u00e0o?",
+ "setup": {
+  "notes.md": "# Ghi ch\u00fa\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "notes.md"
+ ],
+ "answer_mentions": [
+  "Canberra"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": false
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "notes.md",
+  "contains": "Ghi"
+ }
+}

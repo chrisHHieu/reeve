@@ -1,0 +1,6 @@
+{
+  "id": "hello-file",
+  "prompt": "Create hello.txt in the workspace containing exactly: hello bench",
+  "setup": {},
+  "check": { "type": "file_equals", "path": "hello.txt", "expected": "hello bench" }
+}

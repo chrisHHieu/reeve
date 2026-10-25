@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>Account</title>
+<style>
+body{margin:0;font-family:Manrope,system-ui;color:#1e1a24;background:#faf9fb}
+header{display:flex;gap:12px;align-items:center;padding:12px 16px}
+.menu{position:fixed;top:0;left:0;bottom:0;width:260px;background:#fff;display:none}
+.menu.open{display:block}
+.dialog{position:fixed;left:50%;top:50%;width:300px;height:160px;margin:-80px 0 0 -150px;background:#fff;opacity:0;transform:scale(.95);pointer-events:none;transition:opacity 200ms ease,transform 200ms ease}
+.dialog.open{opacity:1;transform:none;pointer-events:auto}
+.tabs button{width:110px;white-space:nowrap}
+@media (prefers-color-scheme: dark){body{background:#1c1922;color:#3a3540}}
+</style></head>
+<body>
+<header>
+  <button class="burger" aria-label="Open menu" aria-expanded="false" onclick="document.querySelector('.menu').classList.add('open')">☰</button>
+  <button class="signup" onclick="document.querySelector('.dialog').classList.add('open')">Sign up</button>
+  <button class="help">Help</button>
+</header>
+<nav class="menu" aria-label="Menu"><a href="#notes">Notes</a></nav>
+<div class="dialog" role="dialog" aria-modal="true"><p>Make an account</p><button onclick="this.parentNode.classList.remove('open')">Close</button></div>
+<div class="tabs"><button>Profile</button><button>Plan</button><button>Devices</button></div>
+<h1>Your account</h1>
+</body></html>

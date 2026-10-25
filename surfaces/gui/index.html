@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <title>Reeve</title>
+    <!-- The theme and palette are set before the first paint, so a dark or palette user never sees
+         a flash of the defaults. The same rules as src/theme.ts: "reeve:theme" missing or
+         unknown follows the system; "reeve:palette" missing or unknown is Reeve, the default, and
+         "harbor" is the stylesheet's own root, with no attribute. theme.test.ts keeps the list of
+         palettes here the same as the app's. -->
+    <script>
+      try {
+        var root = document.documentElement;
+        var theme = localStorage.getItem("reeve:theme");
+        var system = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        root.dataset.theme = theme === "dark" || (theme !== "light" && system) ? "dark" : "light";
+        var palette = localStorage.getItem("reeve:palette");
+        var palettes = ["cupertino", "graphite", "paper", "midnight", "one", "geist", "linear", "catppuccin",
+          "rose-pine", "nord", "gruvbox", "solarized", "tokyo-night", "github"];
+        if (palette !== "harbor") root.dataset.palette = palettes.indexOf(palette) >= 0 ? palette : "reeve";
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

@@ -1,0 +1,125 @@
+/* Cupertino's shape. A palette is colour; this one is also the look of iOS and
+   iPadOS, which colour alone could not give it: rounder corners, a sidebar row filled with
+   systemBlue, a translucent bar, capsule buttons, a green switch, iMessage's bubble, and tool
+   rows drawn as an inset grouped list with a coloured tile per kind of tool. Every rule is
+   scoped to the palette, so no other palette changes. The colours are Apple's system colours,
+   which the palette block in styles.css already carries; the few named here (the tiles) are
+   the same system colours, light and dark. */
+
+html[data-palette="cupertino"] {
+  /* Tailwind's radii read these (tailwind.config.js), the app's own scale the --r-* ones. */
+  --rd-sm: 4px;
+  --rd: 6px;
+  --rd-md: 8px;
+  --rd-lg: 10px;
+  --rd-xl: 14px;
+  --rd-xl2: 16px;
+  --rd-2xl: 20px;
+  --r-xs: 6px;
+  --r-sm: 8px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  /* systemFill, the tile colours of the grouped list, and the user's bubble. */
+  --ios-fill: rgba(118, 118, 128, 0.12);
+  --ios-gray: #8e8e93;
+  --ios-orange: #ff9500;
+  --ios-indigo: #5856d6;
+  --ios-teal: #30b0c7;
+  --ios-green: #34c759;
+  --ios-purple: #af52de;
+  --ios-separator: rgba(60, 60, 67, 0.29);
+}
+html[data-theme="dark"][data-palette="cupertino"] {
+  --ios-fill: rgba(118, 118, 128, 0.24);
+  --ios-gray: #636366;
+  --ios-orange: #ff9f0a;
+  --ios-indigo: #5e5ce6;
+  --ios-teal: #40c8e0;
+  --ios-green: #30d158;
+  --ios-purple: #bf5af2;
+  --ios-separator: rgba(84, 84, 88, 0.65);
+}
+
+/* The sidebar: the conversation you are in is a filled systemBlue row with white text, the
+   iPadOS sidebar's selection. */
+html[data-palette="cupertino"] .q-row.is-active { background: var(--accent); box-shadow: none; }
+/* Everything on the filled row reads white, the diff counts and branch included: green and red
+   on systemBlue are neither legible nor iOS. */
+html[data-palette="cupertino"] .q-row.is-active,
+html[data-palette="cupertino"] .q-row.is-active * { color: #ffffff; }
+html[data-palette="cupertino"] .q-row.is-active .q-line,
+html[data-palette="cupertino"] .q-row.is-active .q-age { opacity: 0.85; }
+
+/* The bar over the conversation: the system's thicker material and a half-point hairline. */
+html[data-palette="cupertino"] .main-topbar {
+  border-bottom: 0.5px solid var(--ios-separator);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+}
+
+/* The person's message: iMessage's blue bubble. */
+html[data-palette="cupertino"] .bubble-user {
+  background: var(--accent);
+  color: #ffffff;
+  border-radius: 18px;
+}
+
+/* Decisions: capsule buttons. The prominent one stays filled; the others are iOS's tinted
+   "bordered" style, a grey fill with the accent's label. */
+html[data-palette="cupertino"] .dec-btn { border-radius: 999px; }
+html[data-palette="cupertino"] .dec-btn:not(.pri):not(.quiet):not(.icon) {
+  border-color: transparent;
+  background: var(--ios-fill);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+/* Controls: the green switch, and the segmented control's grey track under a white thumb. */
+html[data-palette="cupertino"] .settings-toggle.on { background: var(--ios-green); }
+html[data-palette="cupertino"] .settings-segment { background: var(--ios-fill); }
+html[data-palette="cupertino"] .settings-segment-thumb {
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12), 0 3px 1px rgba(0, 0, 0, 0.04);
+}
+
+/* What the agent did, as an inset grouped list: a run of tool rows shares one rounded card,
+   the rows parted by an inset hairline, each led by a tile in its kind's system colour. A row
+   that failed or was stopped keeps its state dot in place of the tile. */
+html[data-palette="cupertino"] .tool-row {
+  background: var(--paper);
+  padding: 4px 10px;
+}
+html[data-palette="cupertino"] :not(.tool-row) + .tool-row,
+html[data-palette="cupertino"] .tool-row:first-child { border-top-left-radius: 12px; border-top-right-radius: 12px; padding-top: 6px; }
+html[data-palette="cupertino"] .tool-row:has(+ :not(.tool-row)),
+html[data-palette="cupertino"] .tool-row:last-child { border-bottom-left-radius: 12px; border-bottom-right-radius: 12px; padding-bottom: 6px; }
+html[data-palette="cupertino"] .tool-row + .tool-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 42px;
+  right: 0;
+  height: 0.5px;
+  background: var(--ios-separator);
+}
+html[data-palette="cupertino"] .tool-row .tool-row-leading {
+  width: 22px;
+  height: 22px;
+  border-radius: 6px;
+  background: var(--ios-gray);
+  color: #ffffff;
+}
+html[data-palette="cupertino"] .tool-row[data-icon="file"] .tool-row-leading,
+html[data-palette="cupertino"] .tool-row[data-icon="notebookPen"] .tool-row-leading { background: var(--accent); }
+html[data-palette="cupertino"] .tool-row[data-icon="pencilLine"] .tool-row-leading { background: var(--ios-orange); }
+html[data-palette="cupertino"] .tool-row[data-icon="search"] .tool-row-leading,
+html[data-palette="cupertino"] .tool-row[data-icon="packageSearch"] .tool-row-leading,
+html[data-palette="cupertino"] .tool-row[data-icon="folderTree"] .tool-row-leading { background: var(--ios-indigo); }
+html[data-palette="cupertino"] .tool-row[data-icon="globe"] .tool-row-leading,
+html[data-palette="cupertino"] .tool-row[data-icon="link"] .tool-row-leading { background: var(--ios-teal); }
+html[data-palette="cupertino"] .tool-row[data-icon="checklist"] .tool-row-leading,
+html[data-palette="cupertino"] .tool-row[data-icon="goal"] .tool-row-leading { background: var(--ios-green); }
+html[data-palette="cupertino"] .tool-row[data-icon="bot"] .tool-row-leading { background: var(--ios-purple); }
+html[data-palette="cupertino"] .tool-row[data-icon="connector"] .tool-row-leading { background: transparent; }
+/* Last, so it wins over a kind's colour at the same weight: a failed or stopped row keeps its
+   state dot on the row's own ground. */
+html[data-palette="cupertino"] .tool-row:is([data-state="error"], [data-state="stopped"]) .tool-row-leading { background: transparent; }

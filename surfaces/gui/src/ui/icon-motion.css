@@ -1,0 +1,266 @@
+/* Icon motion (owner, 2026-10-12, the "Icon set + hover motion" mockup).
+ *
+ * Two kinds, both on the parts of a glyph (components/Icon.tsx), never on the <svg>:
+ *   - a small one, once, while the control holding the icon is hovered or focused, played
+ *     back the other way when the pointer leaves (a lid lifts, a gear turns a quarter);
+ *   - a loop while the icon carries `ico-run`: the work it names is happening now (a
+ *     terminal's caret blinks, a search's lens circles). It stops when the flag drops.
+ * Quiet by rule (DESIGN.md, motion): the app's durations and ease-out, a few pixels or
+ * degrees, no overshoot, nothing that pops. A transcript's finished steps never move: their
+ * icons sit in `.tool-row-leading` / `.think-row-leading` / `.ico-still`, which take no hover
+ * motion. Reduced motion turns all of it off. */
+
+.ico-g,
+.ico-g * {
+  transform-box: fill-box;
+  transform-origin: center;
+  transition:
+    transform var(--dur-4) var(--ease-out),
+    opacity var(--dur-2) var(--ease-out);
+}
+/* The whole glyph turns about the middle of its grid. */
+.ico-g {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+
+/* Parts that start hidden. */
+.ico-folder .ico-open {
+  opacity: 0;
+}
+
+/* ---- hover: the control holding the icon is hovered or focused ---- */
+
+/* The host is any control: a button, a link, a tab, a menu item, a label. */
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-plus .ico-g,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-x .ico-g { transform: rotate(90deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-folderPlus .ico-plus,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-bookPlus .ico-plus,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-fileDiff .ico-cross { transform: rotate(90deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-search .ico-lens,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-inspect .ico-lens,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-packageSearch .ico-lens { transform: translate(-1px, -1px) rotate(-12deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-clock .ico-hand,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-calendarClock .ico-hand2 { animation: ico-sweep 680ms var(--ease-out); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-history .ico-hand { animation: ico-sweep-back 680ms var(--ease-out); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-ops, .ico-chart) .ico-bar { animation: ico-dip 520ms var(--ease-out) both; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-ops, .ico-chart) .ico-bar:nth-child(2) { animation-delay: 60ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-ops, .ico-chart) .ico-bar:nth-child(1) { animation-delay: 120ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gear .ico-g { transform: rotate(90deg); transition-duration: 480ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sliders .ico-k1 { animation: ico-k1 640ms var(--ease-out); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sliders .ico-k2 { animation: ico-k2 640ms var(--ease-out) 60ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sliders .ico-k3 { animation: ico-k3 640ms var(--ease-out) 120ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sidebar .ico-div { transform: translateX(-3px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sidebarRight .ico-div { transform: translateX(3px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-folder .ico-open { opacity: 1; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-folder .ico-closed { opacity: 0; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-refresh, .ico-rotateCw) .ico-g { transform: rotate(180deg); transition-duration: 480ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-copy .ico-back { transform: translate(-1.5px, -1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-copy .ico-front { transform: translate(1px, 1px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-archive .ico-lid { transform: translateY(-2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-trash .ico-lid { transform: translateY(-1.5px) rotate(-12deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-pin .ico-g { transform: rotate(-20deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-moreHorizontal, .ico-moreVertical) .ico-dot { animation: ico-hop 420ms ease-in-out; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-moreHorizontal, .ico-moreVertical) .ico-dot:nth-child(2) { animation-delay: 70ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-moreHorizontal, .ico-moreVertical) .ico-dot:nth-child(3) { animation-delay: 140ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-undo .ico-g { transform: rotate(-25deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-arrowLeft .ico-g { transform: translateX(-2.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-arrowRight .ico-g,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-play .ico-g { transform: translateX(2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-arrowUp .ico-g { transform: translateY(-2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-cornerDownLeft .ico-g { transform: translateX(-2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-arrowDownToLine .ico-arrow { transform: translateY(2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-externalLink .ico-arrow,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-send .ico-g { transform: translate(1.5px, -1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-signOut .ico-arrow { transform: translateX(2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-branch .ico-arc { stroke-dasharray: 15; animation: ico-draw15 460ms var(--ease-out) both; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gitFork .ico-l { transform: translateX(-1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gitFork .ico-r { transform: translateX(1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gitPullRequest .ico-up { transform: translateY(-1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gitCompare .ico-a,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-link .ico-a { transform: translate(1px, 1px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-gitCompare .ico-b,
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-link .ico-b { transform: translate(-1px, -1px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-globe .ico-mer { animation: ico-turn-globe 760ms var(--ease-out); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-plug .ico-head { transform: translateY(-2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-plug .ico-cord { transform-origin: 50% 100%; transform: scaleY(1.4); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-book, .ico-scrollText, .ico-audit, .ico-file, .ico-list) .ico-ln { stroke-dasharray: 14; animation: ico-draw14 460ms var(--ease-out) both; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-book, .ico-scrollText, .ico-audit, .ico-file, .ico-list) .ico-ln:nth-of-type(2n) { animation-delay: 80ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-checklist .ico-tick { stroke-dasharray: 9; animation: ico-draw9 420ms var(--ease-out) both; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-checklist .ico-tick:nth-of-type(2) { animation-delay: 100ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-fold .ico-up { transform: translateY(1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-fold .ico-dn { transform: translateY(-1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-shield .ico-chk { stroke-dasharray: 9; animation: ico-draw9 380ms var(--ease-out) both; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-mic .ico-cap { transform: translateY(-1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-notebookPen .ico-pen { animation: ico-write-once 520ms ease-in-out; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-bot .ico-eye { animation: ico-blink 360ms ease; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-bot .ico-ant { transform: rotate(-14deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-puzzle .ico-g { transform: rotate(-15deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-server .ico-led { animation: ico-fade 520ms ease; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-server .ico-led:nth-of-type(2) { animation-delay: 120ms; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-terminal .ico-prompt { transform: translateX(1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-wrench .ico-g { transform: rotate(-25deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-pencil .ico-pen { transform: rotate(-14deg); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-pencilLine, .ico-edit) .ico-pen { transform: translate(-1.5px, 1px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-expand .ico-a { transform: translate(1.5px, -1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-expand .ico-b { transform: translate(-1.5px, 1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-minimize .ico-a { transform: translate(-1.5px, 1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-minimize .ico-b { transform: translate(1.5px, -1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-panelClose .ico-arr { transform: translateX(2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-panelOpen .ico-arr { transform: translateX(-2px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-messageQuestion .ico-q { animation: ico-hop 420ms ease-in-out; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-alarmClock .ico-g { animation: ico-wobble 520ms ease-in-out; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sparkle .ico-star { animation: ico-quarter 620ms var(--ease-out); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-sparkle .ico-tw { animation: ico-fade 620ms ease; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-code, .ico-codeXml, .ico-braces) .ico-l { transform: translateX(-1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run):is(.ico-code, .ico-codeXml, .ico-braces) .ico-r { transform: translateX(1.5px); }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-folderTree .ico-kid { animation: ico-fade 520ms ease; }
+:is(button, a[href], [role="button"], [role="tab"], [role="menuitem"], [role="menuitemradio"], [role="option"], summary, label):is(:hover, :focus-visible) .ico:not(.ico-run).ico-folderTree .ico-kid:nth-of-type(2) { animation-delay: 120ms; }
+
+/* A transcript's finished steps stay still; so does an icon a caller marks still. */
+:is(.tool-row-leading, .think-row-leading) .ico:not(.ico-run) .ico-g,
+:is(.tool-row-leading, .think-row-leading) .ico:not(.ico-run) .ico-g *,
+.ico-still .ico-g,
+.ico-still .ico-g * {
+  transform: none !important;
+  animation: none !important;
+}
+.ico-still.ico-folder .ico-open,
+:is(.tool-row-leading, .think-row-leading) .ico-folder .ico-open {
+  opacity: 0 !important;
+}
+.ico-still.ico-folder .ico-closed,
+:is(.tool-row-leading, .think-row-leading) .ico-folder .ico-closed {
+  opacity: 1 !important;
+}
+
+/* A + whose menu is open turns an eighth, into a ×: pressing it again closes what it opened. */
+.ico-plus.rail-new-open .ico-g { transform: rotate(45deg) !important; }
+
+/* A check that has just appeared (Copied, a run that finished) is drawn on. */
+.ico-draw .ico-chk {
+  stroke-dasharray: 20;
+  animation: ico-draw20 380ms var(--ease-out) both;
+}
+
+/* ---- running: loops while the work happens ---- */
+
+.ico-loader .ico-g { animation: ico-spin 800ms linear infinite; }
+.ico-run:is(.ico-refresh, .ico-rotateCw) .ico-g { animation: ico-spin 800ms linear infinite; }
+.ico-run.ico-sparkle .ico-star { animation: ico-spin 1600ms linear infinite; }
+.ico-run.ico-sparkle .ico-tw { animation: ico-fade 1600ms ease infinite; }
+.ico-run.ico-brain .ico-ln { stroke-dasharray: 10; animation: ico-loopdraw10 1400ms ease-in-out infinite; }
+.ico-run.ico-brain .ico-ln:nth-of-type(4) { animation-delay: 200ms; }
+.ico-run.ico-brain .ico-ln:nth-of-type(5) { animation-delay: 400ms; }
+.ico-run:is(.ico-file, .ico-book, .ico-scrollText, .ico-list) .ico-ln { animation: ico-scan 1200ms ease-in-out infinite; }
+.ico-run:is(.ico-file, .ico-book, .ico-scrollText, .ico-list) .ico-ln:nth-of-type(2n) { animation-delay: 200ms; }
+.ico-run:is(.ico-file, .ico-book, .ico-scrollText, .ico-list) .ico-ln:nth-of-type(3n) { animation-delay: 400ms; }
+.ico-run:is(.ico-search, .ico-packageSearch, .ico-inspect) .ico-lens { animation: ico-orbit 1200ms linear infinite; }
+.ico-run:is(.ico-pencilLine, .ico-edit, .ico-notebookPen, .ico-pencil) .ico-pen { animation: ico-write 900ms ease-in-out infinite alternate; }
+.ico-run:is(.ico-pencilLine, .ico-edit) .ico-base { stroke-dasharray: 9; animation: ico-loopdraw9 900ms ease-in-out infinite; }
+.ico-run.ico-terminal .ico-caret { animation: ico-caret 1s steps(1) infinite; }
+.ico-run.ico-globe .ico-mer { animation: ico-turn-globe 1400ms ease-in-out infinite; }
+.ico-run:is(.ico-code, .ico-codeXml, .ico-braces) .ico-l { animation: ico-apart-l 1100ms ease-in-out infinite alternate; }
+.ico-run:is(.ico-code, .ico-codeXml, .ico-braces) .ico-r { animation: ico-apart-r 1100ms ease-in-out infinite alternate; }
+.ico-run.ico-checklist .ico-tick { stroke-dasharray: 9; animation: ico-loopdraw9 1300ms ease-in-out infinite; }
+.ico-run.ico-checklist .ico-tick:nth-of-type(2) { animation-delay: 300ms; }
+.ico-run:is(.ico-chart, .ico-ops) .ico-bar { transform-origin: 50% 100%; animation: ico-dip 1100ms ease-in-out infinite; }
+.ico-run:is(.ico-chart, .ico-ops) .ico-bar:nth-child(2) { animation-delay: 150ms; }
+.ico-run:is(.ico-chart, .ico-ops) .ico-bar:nth-child(1) { animation-delay: 300ms; }
+.ico-run.ico-fold .ico-up { animation: ico-in-u 1100ms ease-in-out infinite alternate; }
+.ico-run.ico-fold .ico-dn { animation: ico-in-d 1100ms ease-in-out infinite alternate; }
+.ico-run:is(.ico-wrench, .ico-alarmClock) .ico-g { animation: ico-sway 1300ms ease-in-out infinite alternate; }
+.ico-run.ico-bot .ico-eye { animation: ico-blink-slow 2000ms ease infinite; }
+.ico-run.ico-bot .ico-ant { animation: ico-sway 1600ms ease-in-out infinite alternate; }
+.ico-run.ico-history .ico-hand { animation: ico-sweep-back 1800ms linear infinite; }
+.ico-run.ico-calendarClock .ico-hand2 { animation: ico-sweep 1600ms linear infinite; }
+.ico-run.ico-goal .ico-r1 { animation: ico-ring 1500ms ease-in-out infinite; }
+.ico-run.ico-goal .ico-r2 { animation: ico-ring 1500ms ease-in-out 250ms infinite; }
+.ico-run.ico-goal .ico-r3 { animation: ico-ring 1500ms ease-in-out 500ms infinite; }
+.ico-run.ico-messageQuestion .ico-q { animation: ico-hop 900ms ease-in-out infinite; }
+.ico-run:is(.ico-link, .ico-gitCompare) .ico-a { animation: ico-nudge-a 1100ms ease-in-out infinite; }
+.ico-run:is(.ico-link, .ico-gitCompare) .ico-b { animation: ico-nudge-b 1100ms ease-in-out infinite; }
+.ico-run.ico-branch .ico-arc { stroke-dasharray: 15; animation: ico-loopdraw15 1400ms ease-in-out infinite; }
+.ico-run.ico-folderTree .ico-kid { animation: ico-scan 1200ms ease-in-out infinite; }
+.ico-run.ico-folderTree .ico-kid:nth-of-type(2) { animation-delay: 300ms; }
+.ico-run:is(.ico-folderPlus, .ico-bookPlus) .ico-plus { animation: ico-spin 1600ms var(--ease-out) infinite; }
+.ico-run.ico-plug .ico-head { animation: ico-hop 1000ms ease-in-out infinite; }
+.ico-run.ico-send .ico-g { animation: ico-fly 1000ms ease-in-out infinite; }
+.ico-run.ico-hash .ico-g { animation: ico-slide 1000ms ease-in-out infinite; }
+.ico-run.ico-audioLines .ico-bar { transform-origin: 50% 50%; animation: ico-voice 900ms ease-in-out infinite; }
+.ico-run.ico-audioLines .ico-bar:nth-child(2) { animation-delay: 120ms; }
+.ico-run.ico-audioLines .ico-bar:nth-child(3) { animation-delay: 240ms; }
+.ico-run.ico-audioLines .ico-bar:nth-child(4) { animation-delay: 360ms; }
+.ico-run.ico-audioLines .ico-bar:nth-child(5) { animation-delay: 480ms; }
+.ico-run.ico-audioLines .ico-bar:nth-child(6) { animation-delay: 600ms; }
+.ico-run.ico-server .ico-led { animation: ico-fade 1200ms ease infinite; }
+.ico-run.ico-server .ico-led:nth-of-type(2) { animation-delay: 300ms; }
+
+/* Hands turn about the clock's own centre, not their own box. */
+.ico-clock .ico-hand,
+.ico-history .ico-hand {
+  transform-box: view-box;
+  transform-origin: 12px 12px;
+}
+.ico-calendarClock .ico-hand2 {
+  transform-box: view-box;
+  transform-origin: 16px 16px;
+}
+.ico-trash .ico-lid {
+  transform-origin: 0% 100%;
+}
+:is(.ico-ops, .ico-chart) .ico-bar {
+  transform-origin: 50% 100%;
+}
+
+@keyframes ico-spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes ico-sweep { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+@keyframes ico-sweep-back { from { transform: rotate(0); } to { transform: rotate(-360deg); } }
+@keyframes ico-quarter { from { transform: rotate(0); } to { transform: rotate(90deg); } }
+@keyframes ico-dip { 0%, 100% { transform: scaleY(1); } 45% { transform: scaleY(0.45); } }
+@keyframes ico-k1 { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(-4px); } }
+@keyframes ico-k2 { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(5px); } }
+@keyframes ico-k3 { 0%, 100% { transform: translateX(0); } 45% { transform: translateX(-5px); } }
+@keyframes ico-hop { 0%, 100% { transform: translateY(0); } 45% { transform: translateY(-2px); } }
+@keyframes ico-turn-globe { 0%, 100% { transform: scaleX(1); } 50% { transform: scaleX(0.15); } }
+@keyframes ico-draw9 { from { stroke-dashoffset: 9; } to { stroke-dashoffset: 0; } }
+@keyframes ico-draw14 { from { stroke-dashoffset: 14; } to { stroke-dashoffset: 0; } }
+@keyframes ico-draw15 { from { stroke-dashoffset: 15; } to { stroke-dashoffset: 0; } }
+@keyframes ico-draw20 { from { stroke-dashoffset: 20; } to { stroke-dashoffset: 0; } }
+@keyframes ico-loopdraw9 { 0% { stroke-dashoffset: 9; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -9; } }
+@keyframes ico-loopdraw10 { 0% { stroke-dashoffset: 10; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -10; } }
+@keyframes ico-loopdraw15 { 0% { stroke-dashoffset: 15; } 50% { stroke-dashoffset: 0; } 100% { stroke-dashoffset: -15; } }
+@keyframes ico-blink { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.1); } }
+@keyframes ico-blink-slow { 0%, 80%, 100% { transform: scaleY(1); } 90% { transform: scaleY(0.1); } }
+@keyframes ico-fade { 0%, 100% { opacity: 1; } 45% { opacity: 0.15; } }
+@keyframes ico-scan { 0%, 100% { opacity: 1; } 50% { opacity: 0.2; } }
+@keyframes ico-orbit {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(1.5px, -1px); }
+  50% { transform: translate(0, -2px); }
+  75% { transform: translate(-1.5px, -1px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes ico-write { from { transform: translate(-1.5px, 1px); } to { transform: translate(1px, -1px); } }
+@keyframes ico-write-once { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-1.5px, 1px); } }
+@keyframes ico-caret { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+@keyframes ico-apart-l { from { transform: translateX(0); } to { transform: translateX(-1.5px); } }
+@keyframes ico-apart-r { from { transform: translateX(0); } to { transform: translateX(1.5px); } }
+@keyframes ico-in-u { from { transform: translateY(0); } to { transform: translateY(1.5px); } }
+@keyframes ico-in-d { from { transform: translateY(0); } to { transform: translateY(-1.5px); } }
+@keyframes ico-sway { from { transform: rotate(-10deg); } to { transform: rotate(10deg); } }
+@keyframes ico-wobble { 0%, 100% { transform: rotate(0); } 25% { transform: rotate(-8deg); } 75% { transform: rotate(8deg); } }
+@keyframes ico-ring { 0%, 100% { opacity: 0.25; } 50% { opacity: 1; } }
+@keyframes ico-nudge-a { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(1px, 1px); } }
+@keyframes ico-nudge-b { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(-1px, -1px); } }
+@keyframes ico-fly { 0%, 100% { transform: translate(0, 0); } 50% { transform: translate(1.5px, -1.5px); } }
+@keyframes ico-slide { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(1.5px); } }
+@keyframes ico-voice { 0%, 100% { transform: scaleY(1); } 50% { transform: scaleY(0.35); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ico-g,
+  .ico-g * {
+    transition: none !important;
+    animation: none !important;
+  }
+}

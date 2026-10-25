@@ -1,0 +1,15 @@
+node_modules/
+dist/
+# The desktop shell's main process, built from electron/ (npm run electron:build).
+dist-electron/
+# What electron-builder writes.
+release/
+# What the build stages for the installer: the server bundle and the dictation host.
+/binaries/
+*.local
+.DS_Store
+
+# Playwright
+/test-results/
+/playwright-report/
+/e2e/_dbg.png

@@ -1,0 +1,40 @@
+# Architecture policy — enforced by scripts/architecture_check.py.
+#
+# The point is not style: it is the two failure modes a large Python codebase reaches
+# silently. A file grows until nobody can hold it in their head (the 2700-line manager
+# mixin is what this rule exists to stop repeating), and a package starts importing
+# "upward" — providers reaching into the server, tools into the engine — so the dependency
+# graph stops having a direction. Both are invisible in review and obvious to a checker.
+#
+# Baselined violations are GRANDFATHERED, not forgiven: the entry records the size at the
+# time it was baselined, and a file that grows past `grandfathered_growth` beyond that is a
+# new violation. That is the difference between "we have not split this yet" and "this is
+# allowed to keep growing".
+
+[rules]
+# Per-file line ceiling for production code. Tests are exempt: a long test file is a
+# long list of cases, not a module with too many responsibilities.
+max_file_lines = 400
+max_test_file_lines = 0  # 0 = no ceiling for test files
+
+[limits]
+# How much a baselined file may grow before its growth counts as a new violation.
+grandfathered_growth = 0.10
+
+[paths]
+include = ["harness"]
+exclude = ["__pycache__"]
+
+# The components of the harness, lowest first. A file may import its
+# own component and the ones below it; importing one above is a `layer-violation`.
+[layers]
+order = [
+  "root", "platform", "config", "session", "safety", "llm", "tools", "context", "loop",
+  "orchestration", "modes", "extensions", "observability", "integrations", "interface",
+  "compose", "testing",
+]
+
+# Files allowed past `max_file_lines` regardless of the baseline (none: the baseline is
+# the list, and this exists so an exemption is a reviewed edit with a reason).
+[exemptions]
+max_file_lines = []

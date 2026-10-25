@@ -1,0 +1,335 @@
+{
+ "id": "ledger-over-mcp",
+ "mechanism": "tool_discovery",
+ "prompt": "D\u00f9ng s\u1ed5 c\u00e1i (server ledger) \u0111\u1ec3 tr\u1ea3 l\u1eddi: th\u00e1ng 9/2026 t\u00f4i chi ti\u00eau t\u1ed5ng c\u1ed9ng bao nhi\u00eau ti\u1ec1n tr\u00ean t\u1ea5t c\u1ea3 t\u00e0i kho\u1ea3n, quy ra VND theo t\u1ef7 gi\u00e1 trung b\u00ecnh c\u1ee7a th\u00e1ng \u0111\u00f3, v\u00e0 h\u1ea1ng m\u1ee5c n\u00e0o chi nhi\u1ec1u nh\u1ea5t? Ch\u1ec9 t\u00ednh c\u00e1c kho\u1ea3n chi, kh\u00f4ng t\u00ednh thu nh\u1eadp. Ghi t\u1ed5ng (s\u1ed1 nguy\u00ean VND, kh\u00f4ng d\u1ea5u ph\u00e2n c\u00e1ch) v\u00e0o file tong-chi.txt.",
+ "setup": {
+  "notes.md": "# Chi ti\u00eau\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "notes.md"
+ ],
+ "answer_mentions": [
+  "\u0102n u\u1ed1ng"
+ ],
+ "mcp": {
+  "server": "ledger",
+  "tools": [
+   {
+    "name": "list_accounts",
+    "description": "List the person's accounts with their currency.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {},
+     "required": []
+    },
+    "answers": [
+     {
+      "args": {},
+      "result": [
+       {
+        "id": "acc-vnd",
+        "currency": "VND"
+       },
+       {
+        "id": "acc-usd",
+        "currency": "USD"
+       },
+       {
+        "id": "acc-eur",
+        "currency": "EUR"
+       }
+      ]
+     }
+    ],
+    "otherwise": ""
+   },
+   {
+    "name": "get_transactions",
+    "description": "One account's transactions in one month, in the account's currency.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "description": "An account id from list_accounts."
+      },
+      "month": {
+       "type": "string",
+       "description": "The month, as YYYY-MM."
+      }
+     },
+     "required": [
+      "account_id",
+      "month"
+     ]
+    },
+    "answers": [
+     {
+      "args": {
+       "account_id": "acc-vnd",
+       "month": "2026-09"
+      },
+      "result": [
+       {
+        "amount": -1200000,
+        "currency": "VND",
+        "category": "\u0102n u\u1ed1ng"
+       },
+       {
+        "amount": -3500000,
+        "currency": "VND",
+        "category": "Nh\u00e0 \u1edf"
+       },
+       {
+        "amount": 20000000,
+        "currency": "VND",
+        "category": "L\u01b0\u01a1ng"
+       },
+       {
+        "amount": -450000,
+        "currency": "VND",
+        "category": "\u0110i l\u1ea1i"
+       }
+      ]
+     },
+     {
+      "args": {
+       "account_id": "acc-usd",
+       "month": "2026-09"
+      },
+      "result": [
+       {
+        "amount": -120,
+        "currency": "USD",
+        "category": "\u0102n u\u1ed1ng"
+       },
+       {
+        "amount": -60,
+        "currency": "USD",
+        "category": "\u0110i l\u1ea1i"
+       },
+       {
+        "amount": 500,
+        "currency": "USD",
+        "category": "Thu nh\u1eadp kh\u00e1c"
+       }
+      ]
+     },
+     {
+      "args": {
+       "account_id": "acc-eur",
+       "month": "2026-09"
+      },
+      "result": [
+       {
+        "amount": -80,
+        "currency": "EUR",
+        "category": "\u0102n u\u1ed1ng"
+       },
+       {
+        "amount": -200,
+        "currency": "EUR",
+        "category": "Du l\u1ecbch"
+       }
+      ]
+     }
+    ],
+    "otherwise": "No transactions for that account and month. Accounts: acc-vnd, acc-usd, acc-eur; months as YYYY-MM, the ledger holds 2026-09."
+   },
+   {
+    "name": "get_fx_rate",
+    "description": "The month's average exchange rate of a currency, in VND per unit.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "currency": {
+       "type": "string",
+       "description": "An ISO currency code, such as USD."
+      },
+      "month": {
+       "type": "string",
+       "description": "The month, as YYYY-MM."
+      }
+     },
+     "required": [
+      "currency",
+      "month"
+     ]
+    },
+    "answers": [
+     {
+      "args": {
+       "currency": "VND",
+       "month": "2026-09"
+      },
+      "result": {
+       "currency": "VND",
+       "vnd_per_unit": 1
+      }
+     },
+     {
+      "args": {
+       "currency": "USD",
+       "month": "2026-09"
+      },
+      "result": {
+       "currency": "USD",
+       "vnd_per_unit": 25000
+      }
+     },
+     {
+      "args": {
+       "currency": "EUR",
+       "month": "2026-09"
+      },
+      "result": {
+       "currency": "EUR",
+       "vnd_per_unit": 27500
+      }
+     }
+    ],
+    "otherwise": "No rate for that currency and month. Currencies: VND, USD, EUR; months as YYYY-MM, the ledger holds 2026-09."
+   },
+   {
+    "name": "get_budget",
+    "description": "The monthly budget set for each category.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "month": {
+       "type": "string",
+       "description": "The month, as YYYY-MM."
+      }
+     },
+     "required": [
+      "month"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "list_categories",
+    "description": "Every spending and income category the ledger knows.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {},
+     "required": []
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "create_transaction",
+    "description": "Record a new transaction on an account.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "description": "An account id from list_accounts."
+      },
+      "amount": {
+       "type": "number",
+       "description": "Negative for spending."
+      },
+      "category": {
+       "type": "string",
+       "description": "The category name."
+      }
+     },
+     "required": [
+      "account_id",
+      "amount",
+      "category"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "delete_transaction",
+    "description": "Delete a transaction by its id.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "transaction_id": {
+       "type": "string",
+       "description": "The id."
+      }
+     },
+     "required": [
+      "transaction_id"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "get_net_worth",
+    "description": "Assets minus liabilities at the end of a month, in VND.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "month": {
+       "type": "string",
+       "description": "The month, as YYYY-MM."
+      }
+     },
+     "required": [
+      "month"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "export_csv",
+    "description": "Export an account's transactions for a month as CSV text.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "description": "An account id from list_accounts."
+      },
+      "month": {
+       "type": "string",
+       "description": "The month, as YYYY-MM."
+      }
+     },
+     "required": [
+      "account_id",
+      "month"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   },
+   {
+    "name": "get_account",
+    "description": "One account's name, currency and opening balance.",
+    "inputSchema": {
+     "type": "object",
+     "properties": {
+      "account_id": {
+       "type": "string",
+       "description": "An account id from list_accounts."
+      }
+     },
+     "required": [
+      "account_id"
+     ]
+    },
+    "answers": [],
+    "otherwise": "This ledger has no data for that request."
+   }
+  ]
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "tong-chi.txt",
+  "contains": "17350000"
+ }
+}

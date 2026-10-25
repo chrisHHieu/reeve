@@ -1,0 +1,31 @@
+{
+ "id": "sales-by-country",
+ "mechanism": "show_visual",
+ "prompt": "\u0110\u00e2y l\u00e0 kim ng\u1ea1ch xu\u1ea5t kh\u1ea9u n\u0103m nay c\u1ee7a c\u00f4ng ty theo t\u1eebng n\u01b0\u1edbc (xuat-khau.csv). Th\u1ecb tr\u01b0\u1eddng n\u00e0o l\u1edbn nh\u1ea5t, v\u00e0 doanh thu ph\u00e2n b\u1ed1 theo \u0111\u1ecba l\u00fd ra sao?",
+ "setup": {
+  "xuat-khau.csv": "quoc_gia;kim_ngach_nghin_usd\nNh\u1eadt B\u1ea3n;21000\nH\u00e0n Qu\u1ed1c;15000\nTrung Qu\u1ed1c;38000\nHoa K\u1ef3;44000\n\u0110\u1ee9c;9000\nTh\u00e1i Lan;6400\n\u00dac;7200\nSingapore;4500\nH\u00e0 Lan;8100\n\u1ea4n \u0110\u1ed9;5300\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "xuat-khau.csv"
+ ],
+ "answer_mentions": [
+  "Hoa K\u1ef3"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": true,
+   "blocks_any": [
+    "map",
+    "chart"
+   ],
+   "source": true,
+   "no_restate": true
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "xuat-khau.csv",
+  "contains": "quoc_gia"
+ }
+}

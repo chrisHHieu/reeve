@@ -1,0 +1,31 @@
+{
+ "id": "chart-from-the-file",
+ "mechanism": "show_visual",
+ "prompt": "\u0110\u00e2y l\u00e0 chi ti\u00eau qu\u00fd 3 c\u1ee7a nh\u00e0 t\u00f4i (chi-tieu-q3.csv). Ti\u1ec1n d\u1ed3n v\u00e0o \u0111\u00e2u nhi\u1ec1u nh\u1ea5t? T\u00f4i mu\u1ed1n nh\u00ecn \u0111\u01b0\u1ee3c c\u1ea3 b\u1ee9c tranh theo t\u1eebng danh m\u1ee5c ch\u1ee9 kh\u00f4ng ch\u1ec9 m\u1ed9t con s\u1ed1.",
+ "setup": {
+  "chi-tieu-q3.csv": "ngay;khoan_chi;danh_muc;so_tien\n01/07;Ti\u1ec1n nh\u00e0 th\u00e1ng 7;Nh\u00e0 \u1edf;6.500.000\n03/07;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.180.000\n05/07;\u0110i\u1ec7n th\u00e1ng 6;H\u00f3a \u0111\u01a1n;1.420.000\n06/07;Internet;H\u00f3a \u0111\u01a1n;420.000\n08/07;X\u0103ng xe;\u0110i l\u1ea1i;360.000\n10/07;\u0102n t\u1ed1i gia \u0111\u00ecnh;\u0102n u\u1ed1ng;890.000\n12/07;H\u1ecdc ph\u00ed ti\u1ebfng Anh;H\u1ecdc t\u1eadp;2.400.000\n14/07;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.050.000\n17/07;S\u1eeda \u0111i\u1ec1u h\u00f2a;Nh\u00e0 \u1edf;1.300.000\n20/07;Qu\u00e0 c\u01b0\u1edbi b\u1ea1n;Gia \u0111\u00ecnh;1.000.000\n23/07;C\u00e0 ph\u00ea v\u1edbi kh\u00e1ch;\u0102n u\u1ed1ng;240.000\n26/07;Grab;\u0110i l\u1ea1i;410.000\n28/07;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.220.000\n30/07;Thu\u1ed1c;S\u1ee9c kh\u1ecfe;380.000\n01/08;Ti\u1ec1n nh\u00e0 th\u00e1ng 8;Nh\u00e0 \u1edf;6.500.000\n02/08;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.310.000\n04/08;\u0110i\u1ec7n th\u00e1ng 7;H\u00f3a \u0111\u01a1n;1.510.000\n05/08;Internet;H\u00f3a \u0111\u01a1n;420.000\n07/08;X\u0103ng xe;\u0110i l\u1ea1i;350.000\n09/08;Sinh nh\u1eadt m\u1eb9;Gia \u0111\u00ecnh;1.500.000\n12/08;H\u1ecdc ph\u00ed ti\u1ebfng Anh;H\u1ecdc t\u1eadp;2.400.000\n15/08;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;990.000\n18/08;Kh\u00e1m r\u0103ng;S\u1ee9c kh\u1ecfe;900.000\n21/08;\u0102n t\u1ed1i gia \u0111\u00ecnh;\u0102n u\u1ed1ng;1.060.000\n24/08;Grab;\u0110i l\u1ea1i;380.000\n27/08;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.150.000\n29/08;S\u00e1ch cho con;H\u1ecdc t\u1eadp;450.000\n31/08;N\u01b0\u1edbc th\u00e1ng 7;H\u00f3a \u0111\u01a1n;160.000\n01/09;Ti\u1ec1n nh\u00e0 th\u00e1ng 9;Nh\u00e0 \u1edf;6.500.000\n02/09;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.250.000\n04/09;\u0110i\u1ec7n th\u00e1ng 8;H\u00f3a \u0111\u01a1n;1.380.000\n05/09;Internet;H\u00f3a \u0111\u01a1n;420.000\n07/09;\u0102n t\u1ed1i gia \u0111\u00ecnh;\u0102n u\u1ed1ng;960.000\n10/09;X\u0103ng xe;\u0110i l\u1ea1i;350.000\n12/09;H\u1ecdc ph\u00ed ti\u1ebfng Anh;H\u1ecdc t\u1eadp;2.400.000\n15/09;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.080.000\n18/09;S\u1eeda xe m\u00e1y;\u0110i l\u1ea1i;1.150.000\n21/09;Qu\u00e0 Trung thu;Gia \u0111\u00ecnh;1.200.000\n25/09;C\u00e0 ph\u00ea v\u1edbi kh\u00e1ch;\u0102n u\u1ed1ng;240.000\n27/09;\u0110i ch\u1ee3;\u0102n u\u1ed1ng;1.140.000\n28/09;N\u01b0\u1edbc th\u00e1ng 8;H\u00f3a \u0111\u01a1n;160.000\n29/09;Vitamin;S\u1ee9c kh\u1ecfe;520.000\n"
+ },
+ "hidden": {},
+ "unchanged": [
+  "chi-tieu-q3.csv"
+ ],
+ "answer_mentions": [
+  "Nh\u00e0 \u1edf"
+ ],
+ "tools": {
+  "show_visual": {
+   "called": true,
+   "blocks_any": [
+    "chart",
+    "table"
+   ],
+   "source": true,
+   "no_restate": true
+  }
+ },
+ "check": {
+  "type": "file_contains",
+  "path": "chi-tieu-q3.csv",
+  "contains": "danh_muc"
+ }
+}

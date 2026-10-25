@@ -1,0 +1,356 @@
+/* The Automations page: the list, one automation, and the form (what a waiting run
+   says). Colour: the accent is the primary button and a switch that is on; warm is only
+   "Needs you"; the danger colour is only Failed and Delete. Motion is opacity and transform at
+   the app's own durations, and none of it repeats. Hover changes text or a border, never a
+   grey band; the menu's items are the one exception. */
+
+.auto-view { animation: auto-in var(--dur-2) var(--ease-out); }
+@keyframes auto-in { from { opacity: 0; } }
+
+.auto-fill { flex: 1 1 0; min-width: 0; }
+.auto-num { font-variant-numeric: tabular-nums; }
+.auto-mono { font-family: var(--mono); font-size: 12.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.auto-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.auto-quiet { color: var(--muted); }
+
+.auto-h2 { margin: 26px 0 8px; font-size: 13px; font-weight: 600; color: var(--ink); }
+.auto-help { margin: -4px 0 10px; font-size: 12.5px; color: var(--muted); text-wrap: pretty; }
+.auto-note-line { display: flex; align-items: flex-start; gap: 8px; margin: -6px 0 14px; font-size: 12.5px; color: var(--muted); text-wrap: pretty; }
+.auto-note-line svg { flex: none; margin-top: 2px; }
+
+.auto-card { border: 1px solid var(--line); border-radius: var(--r-lg); background: var(--panel); }
+.auto-box { padding: 12px 14px; font-size: 13px; white-space: pre-wrap; overflow-wrap: anywhere; text-wrap: pretty; }
+
+/* -- the list ---------------------------------------------------------------------------- */
+.auto-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 60px;
+  padding: 8px 8px 8px 14px;
+  border-top: 1px solid var(--line-muted);
+}
+.auto-row:first-child { border-top: 0; }
+.auto-open {
+  flex: 1 1 0;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 0;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  text-align: left;
+  cursor: pointer;
+}
+.auto-title {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: color var(--dur-2) ease-out;
+}
+.auto-open:hover .auto-title { color: var(--accent); }
+.auto-when {
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-variant-numeric: tabular-nums;
+}
+/* The schedule's clock: its hands go round once while the row is hovered. */
+/* Inline in the line it heads (the base styles make every svg a block). */
+.auto-when .ico { display: inline-block; vertical-align: -2px; margin-right: 5px; }
+.auto-row.off .auto-title,
+.auto-row.off .auto-when { color: var(--faint); }
+
+.auto-status {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  color: var(--muted);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.auto-status.live { color: var(--accent); }
+.auto-status.warm { color: var(--warn-ink); font-weight: 500; }
+.auto-status.bad { color: var(--danger); }
+.auto-dot { flex: none; width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
+
+.auto-count,
+.auto-new {
+  flex: none;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.auto-new { margin-left: 8px; }
+
+.auto-icon {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color var(--dur-2) ease-out;
+}
+.auto-icon:hover,
+.auto-icon[aria-expanded="true"] { color: var(--ink); }
+
+.auto-menu-wrap { position: relative; flex: none; display: inline-flex; }
+.auto-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 4px);
+  width: 176px;
+  padding: 6px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  box-shadow: var(--elev-2);
+  animation: auto-menu-in var(--dur-2) var(--ease-out);
+}
+@keyframes auto-menu-in { from { opacity: 0; transform: translateY(-4px); } }
+.auto-menu-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 32px;
+  padding: 0 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink);
+  font-size: 13px;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color var(--dur-1) ease-out;
+}
+.auto-menu-item:hover { background: var(--paper); }
+.auto-menu-item svg { flex: none; color: var(--faint); }
+.auto-menu-item.danger,
+.auto-menu-item.danger svg { color: var(--danger); }
+
+/* -- loading, failed, empty --------------------------------------------------------------- */
+.auto-sk { border-radius: var(--r-xs); background: var(--paper); }
+.auto-sk-lines { display: flex; flex-direction: column; gap: 8px; }
+.auto-skeleton { display: flex; flex-direction: column; gap: 10px; margin-top: 8px; }
+.auto-alert {
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: var(--warn-soft);
+  color: var(--warn-ink);
+  font-size: 13px;
+  text-wrap: pretty;
+}
+.auto-alert > div { margin-top: 10px; }
+.auto-empty-title { margin: 6px 0 10px; font-size: 14px; font-weight: 600; }
+
+/* -- one automation ------------------------------------------------------------------------ */
+.auto-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  margin: 0 0 8px -6px;
+  padding: 0 6px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  transition: color var(--dur-2) ease-out;
+}
+.auto-back:hover { color: var(--ink); }
+.auto-head { display: flex; align-items: flex-start; gap: 10px; flex-wrap: wrap; }
+.auto-head .page-title { overflow-wrap: anywhere; text-wrap: balance; }
+.auto-headline { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 12.5px; color: var(--muted); }
+.auto-facts { display: flex; flex-wrap: wrap; gap: 6px 22px; margin-top: 14px; font-size: 12.5px; color: var(--muted); }
+.auto-facts b { font-weight: 500; color: var(--ink); }
+.auto-grant {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+  padding: 4px 8px 4px 14px;
+  border-top: 1px solid var(--line-muted);
+}
+.auto-grant:first-child { border-top: 0; }
+
+.auto-runs-wrap { overflow: hidden; }
+.auto-runs { width: 100%; border-collapse: collapse; font-size: 13px; }
+.auto-runs th {
+  padding: 8px 14px;
+  border-bottom: 1px solid var(--line-muted);
+  text-align: left;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.auto-runs td { padding: 9px 14px; border-top: 1px solid var(--line-muted); vertical-align: top; white-space: nowrap; }
+.auto-runs tbody tr:first-child td { border-top: 0; }
+.auto-runs .auto-end { text-align: right; }
+.auto-runs tr.auto-note td {
+  max-width: 0; /* lets the one cell that spans the table cut its line instead of widening it */
+  padding-top: 0;
+  border-top: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.auto-runs tr.auto-note td.bad { color: var(--danger); white-space: normal; overflow-wrap: anywhere; }
+.auto-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.auto-link:hover { text-decoration: underline; }
+.auto-link:disabled { color: var(--faint); cursor: default; text-decoration: none; }
+
+/* -- the form ------------------------------------------------------------------------------ */
+.auto-templates { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.auto-templates.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.auto-template {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-height: 86px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--panel);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color var(--dur-2) ease-out;
+}
+.auto-template:hover { border-color: var(--line-strong); }
+.auto-template[aria-pressed="true"] { border-color: var(--ink); box-shadow: inset 0 0 0 1px var(--ink); }
+.auto-template b { font-size: 13.5px; font-weight: 600; }
+.auto-template span { font-size: 12.5px; color: var(--muted); text-wrap: pretty; }
+.auto-template i {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  font-style: normal;
+  font-size: 12px;
+  color: var(--faint);
+}
+.auto-template i > span:last-child { font-size: 12px; color: var(--faint); }
+.auto-template-mark { flex: none; display: inline-flex; }
+.auto-template-mark.off { filter: grayscale(1); opacity: 0.55; }
+.auto-template-blank { width: 18px; height: 18px; border: 1px solid var(--line-strong); border-radius: 5px; }
+
+.auto-need {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 4px 8px 4px 14px;
+  border-top: 1px solid var(--line-muted);
+}
+.auto-need:first-child { border-top: 0; }
+.auto-need-name { font-size: 13px; font-weight: 500; }
+.auto-need-why { font-size: 12.5px; color: var(--muted); }
+.auto-ok { flex: none; display: inline-flex; align-items: center; gap: 5px; padding-right: 6px; font-size: 12.5px; color: var(--ok); white-space: nowrap; }
+
+.auto-form { display: flex; flex-direction: column; gap: 14px; margin-top: 22px; }
+.auto-grid2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.auto-grid3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.auto-label { display: block; margin: 0 0 5px; font-size: 12.5px; font-weight: 500; color: var(--ink); }
+.auto-field {
+  width: 100%;
+  box-sizing: border-box;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  color: var(--ink);
+  font-size: 13.5px;
+  outline: none;
+  transition: border-color var(--dur-2) ease-out;
+}
+.auto-field:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.auto-field::placeholder { color: var(--faint); }
+.auto-field[aria-invalid="true"] { border-color: var(--danger); }
+/* The shared select, drawn as the fields beside it are (it is a wash-filled pill elsewhere). */
+.auto-form button[aria-haspopup="listbox"] {
+  height: 34px;
+  padding: 0 10px;
+  border-color: var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--panel);
+  font-size: 13.5px;
+}
+.auto-textarea { height: auto; min-height: 120px; padding: 8px 10px; line-height: 1.5; resize: vertical; }
+.auto-hint { margin: 5px 0 0; font-size: 12.5px; color: var(--muted); text-wrap: pretty; }
+.auto-error { margin: 5px 0 0; font-size: 12.5px; color: var(--danger); text-wrap: pretty; }
+.auto-reason { font-size: 12.5px; color: var(--warn-ink); text-wrap: pretty; }
+.auto-kept { display: flex; align-items: center; gap: 12px; font-size: 13px; }
+.auto-consent { display: flex; align-items: flex-start; gap: 10px; font-size: 13px; cursor: pointer; text-wrap: pretty; }
+.auto-consent input { margin-top: 3px; accent-color: var(--accent); }
+.auto-consent b { font-weight: 600; }
+.auto-bar {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 22px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+  background: var(--canvas);
+}
+.auto-bar .auto-error { margin: 0; }
+
+/* -- a narrow window: nothing is pushed out of the row, the result goes under the name ------ */
+@media (max-width: 900px) {
+  .auto-row { flex-wrap: wrap; row-gap: 2px; }
+  .auto-row > .auto-status { order: 9; flex-basis: 100%; padding-left: 46px; }
+  .auto-run-word { display: none; }
+  .auto-wide-only { display: none; }
+  .auto-templates,
+  .auto-templates.two,
+  .auto-grid2,
+  .auto-grid3 { grid-template-columns: minmax(0, 1fr); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .auto-view,
+  .auto-menu { animation: none; }
+  .auto-title,
+  .auto-icon,
+  .auto-back,
+  .auto-template,
+  .auto-field,
+  .auto-menu-item { transition: none; }
+}

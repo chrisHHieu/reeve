@@ -1,0 +1,8 @@
+{
+  "name": "release-helper",
+  "version": "0.3.0",
+  "description": "Changelog skill, a /ship command and a release reviewer (test fixture)",
+  "author": {"name": "Example Team"},
+  "homepage": "https://example.com/release-helper",
+  "outputStyles": "./styles"
+}

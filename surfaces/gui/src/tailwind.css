@@ -1,0 +1,5 @@
+/* Tailwind's layers. main.tsx imports this before styles.css, so where the two style the same
+   thing the app's own rule wins. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

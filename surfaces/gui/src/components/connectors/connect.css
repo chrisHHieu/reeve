@@ -1,0 +1,196 @@
+/* The connect sheet (AddConnectionModal) and the one-click pane it shares with the Connectors card.
+   Four moments: ready, waiting on the browser, failed, done. Motion is opacity and transform only,
+   short, and still under prefers-reduced-motion; the spinner is the one loop and it lives only
+   while a sign-in is waiting. */
+
+.connect-head { display: flex; align-items: center; gap: 12px; padding: 20px 20px 0; }
+.connect-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  color: var(--ink);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+  text-wrap: balance;
+}
+.connect-close {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--faint);
+  cursor: pointer;
+}
+.connect-close:hover { color: var(--ink); }
+
+.connect-body { display: flex; flex-direction: column; gap: 14px; padding: 16px 20px 20px; }
+.connect-body.inline { padding: 0; }
+.connect-manual { padding: 4px 6px 8px; }
+
+.connect-lede { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.55; text-wrap: pretty; }
+.connect-strong { color: var(--ink); font-weight: 500; overflow-wrap: anywhere; }
+.connect-small { margin: 0; color: var(--faint); font-size: 12px; line-height: 1.5; text-align: center; }
+.connect-note { color: var(--muted); }
+.connect-warn { color: var(--warn-ink); }
+.connect-foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  margin: -2px 0 0;
+  color: var(--faint);
+  font-size: 12px;
+}
+.connect-steps { margin: 0; padding-left: 18px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+
+/* Buttons. Text on the accent is the canvas colour, so it reads on every palette. */
+.connect-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  width: 100%;
+  height: 36px;
+  border: 0;
+  border-radius: 10px;
+  background: var(--accent);
+  color: var(--canvas);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.connect-primary:hover:not(:disabled) { filter: brightness(1.06); }
+.connect-primary:disabled { opacity: 0.45; cursor: default; }
+.connect-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: 12.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.connect-secondary:hover:not(:disabled) { border-color: var(--line-strong); color: var(--ink); }
+.connect-secondary:disabled { opacity: 0.45; cursor: default; }
+.connect-link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted);
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-color: var(--line-strong);
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.connect-link:hover { color: var(--ink); }
+.connect-close:focus-visible,
+.connect-primary:focus-visible,
+.connect-secondary:focus-visible,
+.connect-link:focus-visible,
+.connect-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.connect-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+
+/* One click | Manual. */
+.connect-tabs-row { padding: 14px 20px 0; }
+.connect-tabs {
+  display: inline-flex;
+  gap: 2px;
+  padding: 3px;
+  border-radius: 9px;
+  background: var(--paper);
+  box-shadow: inset 0 0 0 1px var(--line-muted);
+}
+.connect-tab {
+  height: 26px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 12.5px;
+  cursor: pointer;
+}
+.connect-tab:hover { color: var(--ink); }
+.connect-tab.on { background: var(--panel); color: var(--ink); font-weight: 500; box-shadow: 0 0 0 1px var(--line-muted), 0 1px 2px rgb(15 18 22 / 0.06); }
+
+/* Waiting: what to do over there, and that this side follows by itself. */
+.connect-status,
+.connect-error {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper);
+}
+.connect-status-title { color: var(--ink); font-size: 13px; font-weight: 500; line-height: 1.4; }
+.connect-status-text { margin-top: 2px; color: var(--muted); font-size: 12.5px; line-height: 1.5; overflow-wrap: anywhere; }
+.connect-spinner {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  margin-top: 1px;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+}
+
+/* Failed: the reason, where the button is. */
+.connect-error { background: var(--danger-soft); }
+.connect-error > svg { flex: none; margin-top: 1px; color: var(--danger); }
+
+/* A device code, read across a window. */
+.connect-code {
+  padding: 12px;
+  border-radius: 12px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--mono);
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.18em;
+  text-align: center;
+  user-select: all;
+}
+
+/* Done. */
+.connect-done { align-items: center; text-align: center; padding-top: 22px; }
+.connect-done-mark {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .connect-spinner { animation: connect-spin 0.9s linear infinite; }
+  .connect-status,
+  .connect-error,
+  .connect-done > * { animation: connect-in var(--dur-3) var(--ease-out) backwards; }
+  .connect-done > :nth-child(2) { animation-delay: 40ms; }
+  .connect-done > :nth-child(3) { animation-delay: 80ms; }
+  .connect-close,
+  .connect-primary,
+  .connect-secondary,
+  .connect-tab { transition: background-color var(--dur-2) var(--ease-out), color var(--dur-2) var(--ease-out), border-color var(--dur-2) var(--ease-out); }
+}
+@keyframes connect-spin { to { transform: rotate(360deg); } }
+@keyframes connect-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
