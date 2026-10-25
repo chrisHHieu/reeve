@@ -1,11 +1,33 @@
-# Reeve
+<p align="center">
+  <img src="docs/assets/reeve-mark.svg" width="76" alt="">
+</p>
 
-[Download](#download) · [Issues](https://github.com/chrisHHieu/reeve/issues)
+<h1 align="center">Reeve</h1>
+
+<p align="center">
+  <b>A coding agent that runs on your machine.</b><br>
+  Any model, cloud or local. Your repository, your terminal, your keys.
+</p>
+
+<p align="center">
+  <a href="https://github.com/chrisHHieu/reeve/releases/latest"><img src="https://img.shields.io/github/v/release/chrisHHieu/reeve?color=8a45a6&label=release" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-8a45a6" alt="MIT licence"></a>
+  <img src="https://img.shields.io/badge/Windows-10%20%7C%2011-8a45a6?logo=windows&logoColor=white" alt="Windows 10 and 11">
+  <img src="https://img.shields.io/badge/Python-3.10%2B-8a45a6?logo=python&logoColor=white" alt="Python 3.10 or later">
+</p>
+
+<p align="center">
+  <a href="#download"><b>Download</b></a> ·
+  <a href="#how-a-task-goes">How a task goes</a> ·
+  <a href="#how-its-built">How it's built</a> ·
+  <a href="#running-from-source">Run from source</a> ·
+  <a href="https://github.com/chrisHHieu/reeve/issues">Issues</a>
+</p>
 
 > **Beta.** Reeve can be used for real work today; rough edges are still being worked on, and
 > [issues](https://github.com/chrisHHieu/reeve/issues) are welcome.
 
-**A coding agent that runs on your machine.** Hand Reeve a task in your repository (fix a flaky
+Hand Reeve a task in your repository (fix a flaky
 test, add a feature, find out why the build fails) and it reads the code, makes the change, runs
 the checks until they pass and leaves you a diff to review.
 
@@ -37,17 +59,6 @@ Open it, add a model key (or point it at Ollama), and give it something real to 
    and you approve, change or stop it.
 5. You review the change in the Review panel, file by file, and commit and push from there.
 
-```text
-┌──────────────────────────────────────────────┐
-│               Reeve desktop app              │  Electron shell + React UI
-├──────────────────────────────────────────────┤
-│        agent server on your machine          │  engine · tools · connectors (Python, on aisuite)
-├──────────────┬───────────────┬───────────────┤
-│  your files  │   your apps   │  your model   │  your keys, your machine
-│  & terminal  │ 30 connectors │  any provider │
-└──────────────┴───────────────┴───────────────┘
-```
-
 ## What it does
 
 - **Works in your repository**: searches and reads code (with language servers where there is
@@ -66,6 +77,32 @@ Open it, add a model key (or point it at Ollama), and give it something real to 
   drive, and automations that run on a schedule.
 - **Asks first**: presets from read-only to full access; in the ones that ask, writes, pushes and
   commands wait for your approval, and a run nobody is watching leaves its questions for you.
+
+## How it's built
+
+An agent is a model plus a harness: everything that is not the model. Reeve's harness is one
+Python engine on your machine, and every surface drives that same engine: the desktop app through
+a local HTTP and WebSocket API, the terminal UI and `reeve exec` in their own process.
+
+![Reeve's harness: the surfaces on top, the turn loop at the centre of the engine with models, context, tools, safety and subagents around it, and the session record underneath](docs/assets/architecture.png)
+
+The rules it is held to:
+
+- **Whatever the model saw is on the record.** Every request is written to the session's event
+  log, and one task keeps one trace through every subagent it starts.
+- **Guards come before every tool call.** A guard can refuse or ask you, never grant. A write
+  outside your folders asks; Reeve's own settings and files that run later (git hooks, CI
+  configs) are yours to approve; full access asks nobody and still refuses what is refused.
+- **The context is a transaction.** A long session is compacted into one durable summary block;
+  the transcript itself is append-only, and undoing a turn hides it from the model without
+  deleting it.
+- **Results are bounded, never cut silently.** A large result is saved to a file the agent can
+  read on from, and the result says so.
+- **Checks are evidence.** A goal is done when the transcript shows its checks passed after the
+  last edit; an answer whose change was never checked says so.
+- **A turn outlives its process.** If the server restarts mid-turn, the next one picks the turn up.
+- **Layers, enforced.** The engine is 17 components with one import direction, a size ceiling
+  per file and no cycles between components, checked on every change.
 
 ## Your model, your choice
 
