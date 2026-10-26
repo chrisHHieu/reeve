@@ -18,7 +18,8 @@
 
 <p align="center">
   <a href="#download"><b>Download</b></a> ·
-  <a href="#how-a-task-goes">How a task goes</a> ·
+  <a href="#why-reeve">Why Reeve</a> ·
+  <a href="#measured">Measured</a> ·
   <a href="#how-its-built">How it's built</a> ·
   <a href="#running-from-source">Run from source</a> ·
   <a href="https://github.com/chrisHHieu/reeve/issues">Issues</a>
@@ -37,6 +38,20 @@ the connections you set up.
 
 ![Reeve at work: the task, the steps it took, the diff and the passing tests](docs/assets/how-it-works.png)
 
+## Why Reeve
+
+- **Long sessions that don't forget.** When a conversation outgrows the model's context, Reeve
+  summarizes the old part once and keeps it, instead of re-summarizing everything each time. In
+  real sessions, the share of details (file names, commands, numbers) lost between one summary and
+  the next fell from **51% to 4.1%**.
+- **Fewer tokens for the same work.** The model folds work it has finished into a short note of its
+  own: **31–38% fewer tokens** over a long session, with the same tasks passing. Across real
+  sessions, **96.5%** of prompt tokens are read from the provider's cache.
+- **It asks before it acts.** Every tool call passes guards first, and a guard can only refuse or
+  ask you, never allow on its own. Presets go from read-only to full access.
+- **Your model, your machine.** 20+ providers with your own key, or a local model through Ollama.
+  The agent, your conversations and your keys stay on your computer.
+
 ## Download
 
 The Windows 10/11 (x64) installer is on the [Releases](https://github.com/chrisHHieu/reeve/releases)
@@ -45,19 +60,9 @@ first run ("More info", then "Run anyway"). For macOS (Apple Silicon, macOS 12 o
 from source for now (below) with `packaging/build_dmg.sh`; `packaging/build_windows.ps1` makes the
 Windows one.
 
-Open it, add a model key (or point it at Ollama), and give it something real to do.
-
-## How a task goes
-
-1. You say what you want done: "the upload retry is flaky, fix it", "add a CSV export to the
-   report page", "why does the build fail on Windows?"
-2. Reeve explores the repository, plans the steps and works through them: it searches and reads
-   the code, edits files and runs commands in your terminal.
-3. It checks its own work: after a change it runs the tests or the build, and an answer whose
-   change was never checked says so.
-4. Before anything with consequences (a command that changes things, a push, a message) it asks,
-   and you approve, change or stop it.
-5. You review the change in the Review panel, file by file, and commit and push from there.
+Open it, add a model key (or point it at Ollama), and give it something real to do: "the upload
+retry is flaky, fix it", "add a CSV export to the report page", "why does the build fail on
+Windows?"
 
 ## What it does
 
@@ -78,6 +83,28 @@ Open it, add a model key (or point it at Ollama), and give it something real to 
 - **Asks first**: presets from read-only to full access; in the ones that ask, writes, pushes and
   commands wait for your approval, and a run nobody is watching leaves its questions for you.
 
+## Measured
+
+The numbers above come from Reeve's own sessions and evaluations. They are internal measurements,
+the evaluations on low-cost models, not an industry benchmark.
+
+![Three measurements: details lost between context summaries fell from 51% to 4.1%; the model's own folds cut total tokens by 37.6% and 31.4% on two models; 96.5% of prompt tokens are read from cache](docs/assets/measured.png)
+
+<details>
+<summary>How each number was measured</summary>
+
+| Measurement | How |
+| --- | --- |
+| Details lost between summaries | Real sessions. A detail is a concrete name, path, flag or number that one summary of the context held and the next one no longer did: 2,229 of 4,351 before the redesign, 878 of 21,606 since it shipped (Oct 14, 2026). |
+| Tokens with the model's folds | One long session (three coding tasks in one conversation, then a question only the first task answers), 3 runs with folds off and 3 with folds on, on two low-cost models. Tasks passed 5 of 6 runs with folds off and 6 of 6 with them on; the two sides' token ranges do not overlap on either model. |
+| Prompt cache | 87 real sessions, 4,934 steps. 3.5% of prompt tokens were paid in full; 36% of those came from a tool list rebuilt after a restart, the cause fixed next. |
+
+The evaluations behind these numbers ship with the code: `benchmarks/` holds the probe tasks, the
+ablations (one mechanism switched off) and a gate that calls a change better only when the
+difference is larger than the noise between runs.
+
+</details>
+
 ## How it's built
 
 An agent is a model plus a harness: everything that is not the model. Reeve's harness is one
@@ -86,23 +113,23 @@ a local HTTP and WebSocket API, the terminal UI and `reeve exec` in their own pr
 
 ![Reeve's harness: the surfaces on top, the turn loop at the centre of the engine with models, context, tools, safety and subagents around it, and the session record underneath](docs/assets/architecture.png)
 
-The rules it is held to:
+What it holds to, in plain words:
 
-- **Whatever the model saw is on the record.** Every request is written to the session's event
-  log, and one task keeps one trace through every subagent it starts.
-- **Guards come before every tool call.** A guard can refuse or ask you, never grant. A write
-  outside your folders asks; Reeve's own settings and files that run later (git hooks, CI
-  configs) are yours to approve; full access asks nobody and still refuses what is refused.
-- **The context is a transaction.** A long session is compacted into one durable summary block;
-  the transcript itself is append-only, and undoing a turn hides it from the model without
-  deleting it.
-- **Results are bounded, never cut silently.** A large result is saved to a file the agent can
+- **Everything is on the record.** What the model was shown, and what it did, is written to the
+  session's log. A task and every subagent it starts share one trace you can follow.
+- **Nothing runs before the guards.** A guard can refuse or ask you, never say yes on its own.
+  Writing outside your folders asks; touching Reeve's own settings or files that run later (git
+  hooks, CI configs) waits for you; full access asks nobody but still refuses what is refused.
+- **Nothing is deleted from a conversation.** Old context is summarized, not thrown away, and
+  undoing a turn hides it from the model while the transcript keeps it.
+- **Nothing is cut silently.** A result too large for the model is saved to a file the agent can
   read on from, and the result says so.
-- **Checks are evidence.** A goal is done when the transcript shows its checks passed after the
-  last edit; an answer whose change was never checked says so.
-- **A turn outlives its process.** If the server restarts mid-turn, the next one picks the turn up.
-- **Layers, enforced.** The engine is 17 components with one import direction, a size ceiling
-  per file and no cycles between components, checked on every change.
+- **Done means checked.** A goal counts as done when its checks passed after the last edit; an
+  answer whose change was never checked says so.
+- **A crash doesn't lose your task.** If the server restarts in the middle of a turn, the next
+  one picks the turn up where it was.
+- **The code stays in layers.** 17 components, one direction of imports, a size limit per file
+  and no cycles, checked on every change.
 
 ## Your model, your choice
 
