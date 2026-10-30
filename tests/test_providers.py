@@ -383,9 +383,21 @@ def test_opencode_go_descriptor_builds_a_multi_wire_client():
     p = build_provider_client("opencode-go", {"api_key": "ok"}, None)
     assert isinstance(p, OpenCodeGoProvider)
     assert p._base_url == "https://opencode.ai/inference/go/openai/v1"
-    # The header the gateway 400s without rides every wire, valued per session.
+    # The header the gateway 400s without rides every wire, valued per session, with the two
+    # affinity headers OpenCode's own client sends beside it.
     for model in ("deepseek-v4.1-flash", "qwen3.8-flash", "grok-4.7", "gemini-4-argon-contributor"):
-        assert p._client_for(model)._session_header == "x-opencode-session"
+        assert p._client_for(model)._session_header == ("x-opencode-session", "x-session-affinity", "X-Session-Id")
+
+
+def test_every_session_header_a_gateway_names_carries_the_one_session_value():
+    from harness.llm.providers.base import CACHE_AFFINITY
+    from harness.llm.providers.turns import session_headers
+
+    names =("x-opencode-session", "x-session-affinity", "X-Session-Id")
+    assert session_headers(names, {CACHE_AFFINITY: "sess-1"}, "standin") == dict.fromkeys(names, "sess-1")
+    assert session_headers(names, {}, "standin") == dict.fromkeys(names, "standin")
+    assert session_headers("x-opencode-session", {CACHE_AFFINITY: "s"}, "z") == {"x-opencode-session": "s"}
+    assert session_headers(None, {CACHE_AFFINITY: "s"}, "z") == {}
 
 
 class _GoCatalog:

@@ -28,9 +28,12 @@ from typing import Any
 
 from .outbound import CURRENT_STATE
 
-#: Growth, in estimator tokens, past which a provider's prompt count must have moved:
-#: below it a tokenizer difference or a trimmed reasoning block can hide the change.
-_USAGE_CHECK_MIN_GROWTH = 2_000
+#: Estimated growth since the last count that followed it, past which a provider's prompt count
+#: must have moved by a quarter of it. It was 2,000 over ONE step, and one step was
+#: enough to stop believing a route for good: 12 such verdicts in the store (2026-10-16..30), each
+#: a single step of 2-10k. The qwen route this exists for sat at one number while the session grew
+#: by tens of thousands, which this still catches.
+_USAGE_EVIDENCE_GROWTH = 20_000
 #: How far a provider's count may sit from the estimate of the same request and still be
 #: read as the estimator's bias. On the real store 98% of requests are inside 0.8..1.25;
 #: past half or double, the number is saying something else (a partial usage report, an
@@ -86,20 +89,32 @@ class ContextPriceMixin:
             compaction.estimate_tokens(since, echo=self._reasoning_echo())
         )
 
-    def _record_context_measure(self, measured: int) -> None:
-        """Take the provider's prompt size for the request that just ran — unless it
-        cannot be the whole prompt.
+    def _forget_context_measure(self, *, route_changed: bool = False) -> None:
+        """The provider's last count no longer describes the view: a compaction, a prune or a
+        stage cut shrank it, or another model will read it. The evidence about the route starts
+        again from the next count, and a new route is believed until it shows otherwise."""
+        self._last_context_tokens = None
+        self._usage_anchor = None
+        if route_changed:
+            self._usage_unreliable = False
 
-        History is append-only between measurements (a compaction, prune or revert resets
-        `_last_context_tokens`), so a request made after thousands more tokens were
-        appended must price at least most of them. opencode-go's Anthropic-wire route for
-        qwen3.8-flash reported `input=12209, cache_read=0` five steps running while the
-        session grew (harness eval, 2026-09-24): trusted, the signal never passed 13k and
-        compaction could never fire — the session would run into the model's hard limit.
-        Once a provider is caught under-reporting, the engine stops believing it for the
-        rest of the session and prices the view itself.
+    def _record_context_measure(self, measured: int, *, cleared: int = 0) -> None:
+        """Take the provider's prompt size for the request that just ran, unless the route has
+        shown its counts cannot be the whole prompt.
+
+        `measured` is the prompt the model read. `cleared` is what the provider says it removed
+        before the model read it (Anthropic's server-side context editing), so the
+        request as sent is the sum, and only the sum is like for like with the estimate. The
+        signal keeps `measured`: what fills the window is what the model reads.
+
+        History is append-only between cuts, so a count must follow what was appended.
+        opencode-go's Anthropic-wire route for qwen3.8-flash reported `input=12209,
+        cache_read=0` five steps running while the session grew (harness eval, 2026-09-24):
+        trusted, the signal never passed 13k and compaction could never fire. So a route whose
+        count has not moved by a quarter of `_USAGE_EVIDENCE_GROWTH` of estimated growth since
+        its last count that did is priced by the estimate instead, until its count catches up.
         """
-        previous = self._last_context_tokens
+        sent = measured + max(0, int(cleared or 0))
         # The estimate of the request the provider just priced: nothing has been appended
         # since it was built (the assistant message lands after this), so the view now is
         # the request then.
@@ -107,39 +122,48 @@ class ContextPriceMixin:
             compaction.estimate_tokens(self._outbound_messages())
             + self._tool_schema_tokens()
         )
-        before = self._measured_view_tokens
-        if not self._usage_unreliable and previous is not None and before is not None:
-            grown = view - before
-            if grown >= _USAGE_CHECK_MIN_GROWTH and measured < previous + grown * 0.25:
-                self._usage_unreliable = True
-                logger.warning(
-                    "provider usage for %s looks partial (%d tokens after %d, with ~%d "
-                    "appended); estimating the context instead",
-                    self.model, measured, previous, grown,
-                )
-                # Durable too: the Metrics tab lists the routes caught under-reporting.
-                self.log.append(
-                    "notice",
-                    turn=self._turn_no,
-                    step=self._step_no,
-                    kind="usage_partial",
-                    model=self.model,
-                    text=(
-                        f"{self.model} priced this request at {measured:,} tokens after "
-                        f"{previous:,}, with ~{grown:,} appended; estimating the context"
-                    ),
-                )
+        self._judge_usage(sent, view, measured)
         if self._usage_unreliable:
             self._last_context_tokens = None
             return
         self._last_context_tokens = measured
         self._context_measured_at = len(self.messages)
-        self._measured_view_tokens = view
-        # Like for like: the provider's count over the estimate of the SAME request. The
-        # ratio this replaces divided by an estimate of the stored rows, which a
-        # compaction turns into a different span altogether.
-        if view > 0 and measured > 0:
+        # Like for like: the request as sent over the estimate of the SAME request. The ratio
+        # this replaces divided by an estimate of the stored rows, which a compaction turns
+        # into a different span altogether.
+        if view > 0 and sent > 0:
             low, high = _BIAS_RANGE
-            observed = measured / view
+            observed = sent / view
             if low <= observed <= high:
                 self._estimate_bias = observed
+
+    def _judge_usage(self, sent: int, view: int, measured: int) -> None:
+        """Whether this route's counts follow the request's growth, on the evidence since the last
+        count that did (`_usage_anchor`, cleared by a cut). It decides both ways: a count that
+        catches up is believed again."""
+        anchor = self._usage_anchor
+        if anchor is None:
+            self._usage_anchor = (sent, view)
+            return
+        grown = view - anchor[1]
+        if grown < _USAGE_EVIDENCE_GROWTH:
+            return
+        if sent - anchor[0] >= grown * 0.25:
+            if self._usage_unreliable:
+                self._usage_unreliable = False
+                self._usage_notice("usage_trusted", f"{self.model} counts follow the request again "
+                                   f"({sent:,} tokens); using them")
+            self._usage_anchor = (sent, view)
+        elif not self._usage_unreliable:
+            self._usage_unreliable = True
+            logger.warning(
+                "provider usage for %s looks partial (%d tokens, %d at its last count, with ~%d "
+                "appended since); estimating the context instead", self.model, sent, anchor[0], grown,
+            )
+            self._usage_notice("usage_partial", f"{self.model} priced this request at {measured:,} tokens, "
+                               f"{anchor[0]:,} at its last count that followed, with ~{grown:,} appended "
+                               "since; estimating the context")
+
+    def _usage_notice(self, kind: str, text: str) -> None:
+        # Durable: the Metrics tab lists the routes caught under-reporting.
+        self.log.append("notice", turn=self._turn_no, step=self._step_no, kind=kind, model=self.model, text=text)

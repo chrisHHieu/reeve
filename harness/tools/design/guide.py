@@ -183,6 +183,11 @@ States
 """,
     "interaction": """\
 Interaction
+- A page is a working prototype unless the person asked for a picture of a screen. Every button,
+  tab and toggle on it does what its label says: it changes the page (a state, a panel, a list, a
+  message) or goes somewhere real. Data it acts on can be invented, the action cannot. Seeded
+  content, empty states and errors start in the state a first visit shows. A page that is only a
+  picture says so in its head: <meta name="design-fidelity" content="static">.
 - Every click answers within 100 ms: a pressed state, a change, or a busy state.
 - Menus, dialogs, drawers and toasts animate in AND out (150–250 ms, ease-out, opacity and
   transform only; never width, height, top or left). Respect prefers-reduced-motion.

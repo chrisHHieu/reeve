@@ -5,8 +5,13 @@ against the craft rules `design_guide` gives (`guide.py`, "Interaction", "Color"
 it as sentences. Pure: tested without a browser.
 
 Two kinds, as in `lint.py`: a **fix** line breaks a rule the model was given and is counted in the
-check's `issues`; a **check** line is said and not counted (a button that does nothing is fine in a
-static mockup, and the check cannot know which this is).
+check's `issues`; a **check** line is said and not counted.
+
+A control that does nothing when clicked is a fix. It used to be a check, because a button
+is fine in a static mockup and the check could not tell which a page was; and on the store
+(2026-10-19..20) every design's last version still had 3-5 of its 4-6 tried controls doing nothing,
+under "0 issues". A page now says when it is only a picture of a screen
+(`<meta name="design-fidelity" content="static">`), and only then is a still button a check.
 """
 
 from __future__ import annotations
@@ -30,6 +35,8 @@ class Behaviour:
     dark_missing: bool = False
     long_text: Optional[dict[str, Any]] = None
     unfinished: list[str] = field(default_factory=list)
+    #: The page declares itself a static mockup (`is_static`): its controls may stay still.
+    static: bool = False
 
     def findings(self) -> tuple[list[str], list[str]]:
         """`(fix, check)`: sentences, each with no leading dash."""
@@ -63,7 +70,14 @@ class Behaviour:
                 fix.append(f"{opened} vanishes at once when it closes; it should move out the way it came in")
         if idle:
             shown = ", ".join(idle[:3]) + (f" and {len(idle) - 3} more" if len(idle) > 3 else "")
-            check.append(f"Clicking {shown} changed nothing on the page. Fine in a static mockup; wire it if the page should answer")
+            if self.static:
+                check.append(f"Clicking {shown} changed nothing on the page, which is declared a static mockup")
+            else:
+                fix.append(
+                    f"Clicking {shown} changed nothing on the page. Make each one answer (a state, a panel, "
+                    'a message) or a real link, or, if the page is only a picture of a screen, say so with '
+                    '<meta name="design-fidelity" content="static">'
+                )
         if self.dark_missing:
             fix.append("DESIGN.md speaks of a dark palette and the page has no dark styles (@media (prefers-color-scheme: dark))")
         for item in (self.dark or {}).get("contrast") or []:
@@ -98,6 +112,7 @@ class Behaviour:
             "design_controls_tried": len(self.interactions),
             "design_behaviour": len(fix),
             "design_dead_clicks": sum(1 for entry in self.interactions if entry.get("dead")),
+            "design_static": self.static,
             "design_dark_checked": self.dark is not None,
             "design_long_text": int(any(line.startswith("With longer text") for line in fix)),
             "design_unfinished": len(self.unfinished),
@@ -105,6 +120,19 @@ class Behaviour:
 
 
 _DARK_STYLES = re.compile(r"prefers-color-scheme\s*:\s*dark|\[data-theme\s*=\s*[\"']?dark|\.dark\b|color-scheme\s*:[^;]*dark", re.I)
+
+
+#: A page that says it is a static mockup, the attributes in either order.
+_META = re.compile(r"<meta\b[^>]*>", re.I)
+
+
+def is_static(source: str) -> bool:
+    """Whether the page declares `<meta name="design-fidelity" content="static">`."""
+    for tag in _META.findall(source or ""):
+        lowered = tag.lower().replace("'", '"')
+        if 'name="design-fidelity"' in lowered and 'content="static"' in lowered:
+            return True
+    return False
 
 
 #: DESIGN.md promising a dark scheme, not merely naming a dark colour ("dark grey ink").

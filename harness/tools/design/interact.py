@@ -56,6 +56,12 @@ INSTALL_JS = r"""
     return r.right > 0 && r.bottom > 0 && r.left < innerWidth && r.top < innerHeight;
   };
   const OPENS = '[aria-expanded], [aria-haspopup], [aria-controls]';
+  // The choice already made (selected tab, current page, the pressed one of a set; a lone pressed
+  // toggle turns off) has nothing to answer: trying it read the kit's billing toggle as dead.
+  const chosen = (el) => el.getAttribute('aria-selected') === 'true'
+    || !['', 'false'].includes(el.getAttribute('aria-current') || '')
+    || (el.getAttribute('aria-pressed') === 'true' && [...(el.parentElement?.children || [])]
+      .some((other) => other !== el && other.hasAttribute('aria-pressed')));
   const controls = () => {
     const found = [...document.querySelectorAll(
       'button, [role=button], [role=tab], [role=menuitem], summary, a[href^="#"], ' + OPENS
@@ -69,7 +75,7 @@ INSTALL_JS = r"""
       const type = (el.getAttribute('type') || '').toLowerCase();
       // A button that would submit a form leaves the page; it is not a control to try here.
       if (form && el.tagName === 'BUTTON' && (type === '' || type === 'submit')) return false;
-      return true;
+      return !chosen(el);
     });
     const unique = [...new Set(found)];
     const opener = (el) => el.matches(OPENS) || /menu|open|more|sign|filter|settings|close/i.test(
@@ -115,8 +121,13 @@ INSTALL_JS = r"""
         .map((e) => [e.getAttribute('aria-expanded'), e.getAttribute('aria-selected'), e.getAttribute('aria-checked'),
           e.getAttribute('aria-pressed'), e.hasAttribute('open')].join(',')).join(';');
       const classes = [...document.body.querySelectorAll('[class]')].map((e) => e.getAttribute('class')).join(' ');
+      // A control that only restyles an element or sets a field also answered: without
+      // these, a colour swatch or a stepper read as a button that did nothing.
+      const styles = [...document.body.querySelectorAll('[style]')].map((e) => e.getAttribute('style')).join(';');
+      const fields = [...document.querySelectorAll('input, select, textarea')]
+        .map((e) => (e.type === 'checkbox' || e.type === 'radio') ? String(e.checked) : String(e.value)).join('|');
       return [on.join(','), aria, (document.body.innerText || '').length, location.hash, Math.round(scrollY),
-        classes.length].join('#');
+        classes.length, styles, fields].join('#');
     },
     start(overlayOnly) {
       const els = overlayOnly ? [document.querySelector('[data-reeve-overlay]')].filter(Boolean) : candidates();

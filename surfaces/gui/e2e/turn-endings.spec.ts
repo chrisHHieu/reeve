@@ -23,7 +23,7 @@ test("interrupted partial stream survives the next turn", async ({ page }) => {
   await say(page, "stream the epic", "enter");
   await expect(page.getByText(PARTIAL).first()).toBeVisible({ timeout: 10_000 });
   await page.getByRole("button", { name: /Stop/ }).click();
-  await expect(page.getByText("Interrupted.").first()).toBeVisible({ timeout: 5_000 });
+  await expect(page.getByText("Stopped.", { exact: true }).first()).toBeVisible({ timeout: 5_000 });
   await expect(page.getByText(PARTIAL).first()).toBeVisible();
 
   await say(page, "continue please", "enter");

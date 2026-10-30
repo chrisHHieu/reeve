@@ -19,7 +19,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable, Optional
 
-from .behaviour import DARK_PROMISED, Behaviour, has_dark_styles
+from .behaviour import DARK_PROMISED, Behaviour, has_dark_styles, is_static
 from .browser import Render, render_page
 from .lint import LintFinding, lint_source
 from .loads import lines as load_lines, missing_files, unloaded_fonts
@@ -380,6 +380,7 @@ def check_page(
     state_pages = any(path.with_name(f"{stem}.{state}{path.suffix}").is_file() for state in STATES)
     report.lint = lint_source(source, design_md_text=tokens.text, state_pages=state_pages or stem != path.stem)
     report.behaviour.dark_missing = bool(DARK_PROMISED.search(tokens.text)) and not has_dark_styles(source)
+    report.behaviour.static = is_static(source)
     report.locked_changed = locked_line(path)
     if previous is not None and report.inventory:
         report.changes = changes(previous, report.inventory)

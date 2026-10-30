@@ -62,14 +62,14 @@ LAYOUTS: dict[str, str] = {
   <section class="section" id="start" style="background: var(--ink); color: var(--ground)">
     <div class="wrap stack">
       <h2>[[the promise again, shorter]]</h2>
-      <div class="row"><a class="btn primary" href="#">[[main action]]</a></div>
+      <div class="row"><a class="btn primary" href="[[the page it opens]].html">[[main action]]</a></div>
     </div>
   </section>
 </main>
 <footer class="wrap section">
   <div class="grid">
-    <div><p class="kicker">[[group]]</p><ul class="links"><li><a href="#">[[link]]</a></li><li><a href="#">[[link]]</a></li></ul></div>
-    <div><p class="kicker">[[group]]</p><ul class="links"><li><a href="#">[[link]]</a></li><li><a href="#">[[link]]</a></li></ul></div>
+    <div><p class="kicker">[[group]]</p><ul class="links"><li><a href="[[page]].html">[[link]]</a></li><li><a href="[[page]].html">[[link]]</a></li></ul></div>
+    <div><p class="kicker">[[group]]</p><ul class="links"><li><a href="[[page]].html">[[link]]</a></li><li><a href="[[page]].html">[[link]]</a></li></ul></div>
   </div>
   <p class="meta">[[© year, company]]</p>
 </footer>""",
@@ -88,23 +88,23 @@ LAYOUTS: dict[str, str] = {
     <article class="card stack">
       <h2 style="font-size: var(--step-1)">[[plan]]</h2>
       <p class="meta">[[who it is for, one line]]</p>
-      <p><span class="num" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
-      <a class="btn" href="#">[[start action]]</a>
+      <p><span class="num" data-month="[[price]]" data-year="[[price, billed yearly]]" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
+      <a class="btn" href="[[the page it opens]].html">[[start action]]</a>
       <ul class="stack" style="padding-left: 1.1em"><li>[[what it includes]]</li><li>[[what it includes]]</li></ul>
     </article>
     <article class="card stack" style="border-color: var(--ink); box-shadow: 0 0 0 1px var(--ink)">
       <p class="kicker" style="color: var(--ink)">[[Recommended]]</p>
       <h2 style="font-size: var(--step-1)">[[plan]]</h2>
       <p class="meta">[[who it is for]]</p>
-      <p><span class="num" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
-      <a class="btn primary" href="#">[[start action]]</a>
+      <p><span class="num" data-month="[[price]]" data-year="[[price, billed yearly]]" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
+      <a class="btn primary" href="[[the page it opens]].html">[[start action]]</a>
       <ul class="stack" style="padding-left: 1.1em"><li>[[all of the plan before, plus…]]</li><li>[[what it adds]]</li></ul>
     </article>
     <article class="card stack">
       <h2 style="font-size: var(--step-1)">[[plan]]</h2>
       <p class="meta">[[who it is for]]</p>
-      <p><span class="num" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
-      <a class="btn" href="#">[[talk to sales]]</a>
+      <p><span class="num" data-month="[[price]]" data-year="[[price, billed yearly]]" style="font: 700 var(--step-4)/1 var(--font-display)">[[price]]</span> <span class="meta">[[/ month]]</span></p>
+      <a class="btn" href="[[the page it opens]].html">[[talk to sales]]</a>
       <ul class="stack" style="padding-left: 1.1em"><li>[[what it adds]]</li><li>[[what it adds]]</li></ul>
     </article>
   </section>
@@ -122,6 +122,20 @@ LAYOUTS: dict[str, str] = {
     <details class="faq"><summary>[[trials, refunds, cancelling, seats]]</summary><p>[[a short answer]]</p></details>
     <details class="faq"><summary>[[a question]]</summary><p>[[a short answer]]</p></details>
   </section>
+  <script>
+    // Monthly or yearly: the pressed button decides which price every plan shows.
+    document.querySelectorAll('[aria-label="Billing"] button').forEach((button, i, all) => {
+      button.addEventListener('click', () => {
+        all.forEach((other) => {
+          other.setAttribute('aria-pressed', String(other === button));
+          other.classList.toggle('primary', other === button);
+        });
+        document.querySelectorAll('[data-month]').forEach((price) => {
+          price.textContent = i ? price.dataset.year : price.dataset.month;
+        });
+      });
+    });
+  </script>
 </main>""",
     "dashboard": """\
 <style>
@@ -135,7 +149,7 @@ LAYOUTS: dict[str, str] = {
 <div class="dash">
   <aside>
     <p style="font-weight: 700">[[product]]</p>
-    <nav aria-label="Sections"><ul class="links"><li><a href="#" aria-current="page">[[section]]</a></li><li><a href="#">[[section]]</a></li><li><a href="#">[[section]]</a></li></ul></nav>
+    <nav aria-label="Sections"><ul class="links"><li><a href="[[this screen]].html" aria-current="page">[[section]]</a></li><li><a href="[[screen]].html">[[section]]</a></li><li><a href="[[screen]].html">[[section]]</a></li></ul></nav>
   </aside>
   <main class="stack">
     <div class="row" style="justify-content: space-between">
@@ -143,7 +157,7 @@ LAYOUTS: dict[str, str] = {
       <div class="row">
         <label class="sr-only" for="range">Time range</label>
         <select id="range" style="width: auto"><option>[[Last 7 days]]</option></select>
-        <a class="btn primary" href="#">[[main action]]</a>
+        <a class="btn primary" href="[[the page it opens]].html">[[main action]]</a>
       </div>
     </div>
     <section class="grid" aria-label="Key numbers">
@@ -189,10 +203,10 @@ LAYOUTS: dict[str, str] = {
       <li class="item"><div><p style="margin: 0; font-weight: 600">[[a real-looking item]]</p><p class="meta" style="margin: 0">[[detail]]</p></div><span class="num">[[amount or time]]</span></li>
       <li class="item"><div><p style="margin: 0; font-weight: 600">[[a real-looking item]]</p><p class="meta" style="margin: 0">[[detail]]</p></div><span class="num">[[amount or time]]</span></li>
     </ul>
-    <a class="btn primary" href="#" style="width: 100%">[[the main action, in thumb reach]]</a>
+    <a class="btn primary" href="[[the screen it opens]].html" style="width: 100%">[[the main action, in thumb reach]]</a>
   </main>
   <nav aria-label="Sections">
-    <a href="#" aria-current="page">[[tab]]</a><a href="#">[[tab]]</a><a href="#">[[tab]]</a><a href="#">[[tab]]</a>
+    <a href="[[this screen]].html" aria-current="page">[[tab]]</a><a href="[[screen]].html">[[tab]]</a><a href="[[screen]].html">[[tab]]</a><a href="[[screen]].html">[[tab]]</a>
   </nav>
 </div>""",
     "slides": """\
@@ -234,7 +248,7 @@ LAYOUTS: dict[str, str] = {
     </figure>
     <aside class="card"><p style="margin: 0"><strong>[[Note]]</strong> [[a warning or tip, used once]]</p></aside>
     <h2>[[next steps]]</h2>
-    <ul class="links"><li><a href="#">[[related page]]</a></li><li><a href="#">[[how to get help]]</a></li></ul>
+    <ul class="links"><li><a href="[[page]].html">[[related page]]</a></li><li><a href="[[page]].html">[[how to get help]]</a></li></ul>
   </article>
 </main>""",
     "form": """\
@@ -248,7 +262,7 @@ LAYOUTS: dict[str, str] = {
       <div><label for="team">[[Team size]]</label><select id="team" name="team"><option>[[1–10]]</option></select></div>
       <button class="btn primary" type="submit" style="width: 100%">[[what happens: Create account]]</button>
     </form>
-    <ul class="links"><li><a href="#">[[the quiet way back: Sign in instead]]</a></li></ul>
+    <ul class="links"><li><a href="[[page]].html">[[the quiet way back: Sign in instead]]</a></li></ul>
   </div>
 </main>""",
 }

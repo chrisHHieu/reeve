@@ -17,6 +17,7 @@ from harness.session.session_log import SessionLog
 from harness.tools import ToolRegistry
 
 from summary_fixtures import valid_summary
+from harness.context.compaction import part as _part, render_parts as _render_parts
 
 SUMMARY = valid_summary("finish the report")
 
@@ -107,7 +108,7 @@ def test_manual_compaction_runs_below_pressure_and_reports_the_numbers(tmp_path)
         if m.get("role") == "notice" and m.get("kind") == "compacted"
     )
     assert notice.get("saved_tokens") == result["saved_tokens"]
-    assert notice.get("summary") == SUMMARY
+    assert notice.get("summary") == _render_parts([_part(SUMMARY)])
 
 
 def test_manual_compaction_asks_for_the_summary_not_the_prune_tier(tmp_path, monkeypatch):
@@ -195,7 +196,7 @@ def test_the_manager_runs_it_durably_and_refuses_mid_turn(tmp_path):
     data = broadcasts[1]["message"]["data"]
     assert data["now_tokens"] == out["now_tokens"] > 0
     assert data["saved_tokens"] == out["saved_tokens"] > 0
-    assert data["summary"] == SUMMARY
+    assert data["summary"] == _render_parts([_part(SUMMARY)])
     assert isinstance(data["seconds"], float) and data["seconds"] >= 0
 
     # Durable: a rebuild keeps the condensed view instead of resurrecting the raw thread.

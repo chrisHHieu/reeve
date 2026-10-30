@@ -116,6 +116,9 @@ def test_stop_resolves_the_turn_while_a_tool_is_still_running(tmp_path):
 
     finished = next(ev for ev in events if ev.type is EventType.TOOL_FINISHED)
     assert finished.data["status"] == INTERRUPTED
+    # The row says it was stopped. run_shell's presenter read this same result as "Command
+    # could not start" under a command that had run for four minutes.
+    assert finished.data["presentation"]["summary"] == "Stopped before it finished"
     # The turn came back promptly rather than waiting out the tool's own deadline.
     assert elapsed < 3
 

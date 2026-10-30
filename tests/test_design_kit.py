@@ -105,6 +105,16 @@ def test_every_layout_filled_and_bound_to_a_direction_checks_clean(tmp_path, kin
     assert not report.unloaded_fonts and not report.missing
 
 
+def test_no_link_in_the_kit_goes_nowhere():
+    # A page is a working prototype, and pages are pasted from these: a `href="#"` there
+    # is a dead link in every page. The check clicks only what the first screen shows, so the links
+    # further down (a closing action, the footer) are held here.
+    from harness.tools.design.recipes import STARTER
+
+    for name, text in [("starter", STARTER), *LAYOUTS.items()]:
+        assert 'href="#"' not in text, name
+
+
 @needs_browser
 def test_a_page_whose_fonts_were_not_copied_is_told_how_to_bring_them(tmp_path):
     direction = project_for(tmp_path, "editorial")

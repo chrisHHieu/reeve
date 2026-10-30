@@ -15,6 +15,7 @@ from .completion import CompletionMixin
 from .dispatch import DispatchMixin
 from .design_checks import DesignCheckMixin
 from .context_fold import ContextFoldMixin
+from .context_ledger import ContextLedgerMixin
 from .context_price import ContextPriceMixin
 from .controls import ControlsMixin
 from .core import CoreMixin
@@ -55,6 +56,7 @@ class TurnEngine(
     StageCutMixin,
     ContextPriceMixin,
     ContextFoldMixin,
+    ContextLedgerMixin,
     ViewCutMixin,
     RepairMixin,
     HookCallsMixin,

@@ -17,7 +17,7 @@ export function turnAnnouncement(items: readonly Item[], running: boolean): stri
   // The turn's tail after the person's last message: its receipt, and how it ended.
   const lastUser = items.map((item) => item.kind).lastIndexOf("user");
   const turn = items.slice(lastUser + 1);
-  if (turn.some((item) => item.kind === "notice" && item.text === "Interrupted.")) return "Stopped";
+  if (turn.some((item) => item.kind === "notice" && item.text === "Stopped.")) return "Stopped";
   if (turn.some((item) => item.kind === "notice" && item.retriable)) return "Stopped with an error";
   const parts = ["Done"];
   const changes = [...turn].reverse().find((item) => item.kind === "changes");

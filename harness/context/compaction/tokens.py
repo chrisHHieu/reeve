@@ -312,6 +312,27 @@ def _attachment_tokens(part: Any) -> int:
     return 0
 
 
+def _replayed_text(message: dict[str, Any]) -> dict[str, Any]:
+    """The message with Claude's replay sidecar priced as the thinking it carries back.
+
+    Each block also carries its signature, and the sidecar the prefix digest it is bound to (ADR
+    0207): opaque bytes the model never reads, which were priced as prose. In session 90e83048-f57
+    (2026-10-30) the signatures alone were 72k of a 323k estimate of a request the provider read at
+    161k plus 31k it cleared. A redacted block's `data` is its thinking, encrypted, and stays."""
+    replay = message.get("_anthropic")
+    if not isinstance(replay, dict):
+        return message
+    texts = [
+        str(block.get("thinking") or block.get("data") or "")
+        for block in replay.get("blocks") or []
+        if isinstance(block, dict)
+    ]
+    out = {key: value for key, value in message.items() if key != "_anthropic"}
+    if any(texts):
+        out["_anthropic"] = texts
+    return out
+
+
 def _measurable(message: Any) -> tuple[Any, int]:
     """`(message with inlined payloads blanked, attachment token cost)`.
 
@@ -320,6 +341,7 @@ def _measurable(message: Any) -> tuple[Any, int]:
     """
     if not isinstance(message, dict):
         return message, 0
+    message = _replayed_text(message)
     content = message.get("content")
     if not isinstance(content, list):
         return message, 0

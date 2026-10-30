@@ -112,7 +112,7 @@ def test_a_stage_that_just_ended_verified_is_where_the_session_compacts(tmp_path
     signal, trigger = engine._context_signal(), engine._history_trigger_tokens()
     assert signal < trigger <= 2 * signal  # past half the trigger, under the trigger
     assert engine._stage_due(signal, trigger) is True
-    assert engine._compaction_due() is True
+    assert engine._compaction_due() is True and engine._compaction_why() == "stage"
     engine._turn_wrote_code = False
     assert engine._stage_due(signal, trigger) is False  # no code written this turn: no stage
     engine._turn_wrote_code = True

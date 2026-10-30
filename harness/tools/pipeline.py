@@ -112,6 +112,9 @@ class Block:
 
     reason: str
     rule: str = ""
+    #: The files the reason itself shows whole, as (path, digest of the version shown): a
+    #: refusal that carries the file is a read of it once the model has the text.
+    shown: tuple[tuple[str, str], ...] = ()
 
 
 def _blocked_text(block: Block) -> str:
@@ -282,6 +285,8 @@ def _blocked_result(blocked: Block) -> ToolResult:
             "error": _blocked_text(blocked),
             "reason": blocked.reason,
             "rule": blocked.rule,
+            # A runtime sidecar (`loop/result_recording.py` lifts it): never model-visible.
+            **({"_shown": [list(entry) for entry in blocked.shown]} if blocked.shown else {}),
         },
         status=BLOCKED,
     )

@@ -14,15 +14,25 @@ from typing import Any, Optional
 #: never see it; only stock OpenAI gets the translation.
 CACHE_AFFINITY = "cache_affinity"
 
+#: Private message key on the compacted block: the character offsets in its `content`
+#: where each part of the block ends. The older parts are byte-stable from one cut to the next, so
+#: a provider that caches by explicit breakpoints (Anthropic) splits the block there and marks the
+#: last part, and the next cut reads every earlier part from cache. A provider that caches by
+#: prefix needs nothing, and the leading underscore makes the compatible wires drop the key.
+CACHE_SEGMENTS = "_cache_segments"
 
-def session_headers(name: Optional[str], settings: dict[str, Any], standin: str) -> dict[str, str]:
+
+def session_headers(name: Any, settings: dict[str, Any], standin: str) -> dict[str, str]:
     """The routing header a gateway demands (OpenCode Go's `x-opencode-session`), valued with the
-    session id from `settings`, or `standin` for a call that has none (a background pass). Empty
-    when the provider was built without one, so no other route starts sending it."""
-    if not name:
+    session id from `settings`, or `standin` for a call that has none (a background pass). `name`
+    may be several headers, all given the same value. Empty when the provider was built without
+    one, so no other route starts sending it."""
+    names = (name,) if isinstance(name, str) else tuple(name or ())
+    if not names:
         return {}
     affinity = settings.get(CACHE_AFFINITY)
-    return {name: str(affinity) if affinity else standin}
+    value = str(affinity) if affinity else standin
+    return {header: value for header in names}
 
 
 @dataclass
@@ -104,6 +114,16 @@ class AssistantTurn:
     # request went again without thinking). Observation only, like `upstream`: written to the event
     # log, never kept on a message.
     thinking_dropped: Optional[dict[str, int]] = None
+    # The id the provider gave this response, and what it said about the request's prefix against
+    # the previous one of the conversation (`{type, tokens?}`): Anthropic's cache diagnostics.
+    # Observation only, like `upstream`.
+    response_id: Optional[str] = None
+    cache_miss: Optional[dict[str, Any]] = None
+    # What the provider cleared from the request before the model read it (`{input_tokens,
+    # tool_uses?, thinking_turns?}`): Anthropic's server-side context editing. `usage` is
+    # the prompt after the clearing, so the request as sent is `usage` plus `input_tokens` here.
+    # Observation only, like `upstream`.
+    context_cleared: Optional[dict[str, int]] = None
 
     @property
     def has_tool_calls(self) -> bool:

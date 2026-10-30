@@ -224,7 +224,7 @@ def test_the_guide_quotes_design_md_or_says_how_to_draft_one(tmp_path):
     drafting = guide_text(tmp_path, [tmp_path])
     assert "Draft one at the project root" in drafting
     assert "- src/app.css" in drafting and "- tailwind.config.js" in drafting
-    assert "Layout\n- One clear" in drafting and "Interaction\n- Every click" in drafting
+    assert "Layout\n- One clear" in drafting and "Interaction\n- A page is a working prototype" in drafting
     (tmp_path / "DESIGN.md").write_text(DESIGN_MD, encoding="utf-8")
     assert "Manrope everywhere" in guide_text(tmp_path, [tmp_path])
 
@@ -489,12 +489,20 @@ def test_what_a_click_did_becomes_a_sentence_against_the_rules():
         "div.dialog vanishes at once when it closes; it should move out the way it came in",
         "button.more says it opens something (aria-expanded, aria-controls or aria-haspopup) and clicking it changed nothing",
         "Esc does not close div.toast",
+        # A button that does nothing is a fix on a working prototype.
+        "Clicking button.help changed nothing on the page. Make each one answer (a state, a panel, a message) or a "
+        'real link, or, if the page is only a picture of a screen, say so with <meta name="design-fidelity" content="static">',
         "In dark mode, text under 3:1: h1 is #3a3540 on #1c1922, 1.5:1",
         "With longer text (a long German word in labels, a Vietnamese sentence in headings) at 390 px, the page runs "
         "120 px off and text spills out of button.cta; let it wrap, or truncate with an ellipsis and the full text on hover",
     ]
-    # A button that does nothing is fine in a static mockup: said, not counted.
-    assert check == ["Clicking button.help changed nothing on the page. Fine in a static mockup; wire it if the page should answer"]
+    assert check == []
+    # On a page that says it is a static mockup, it is said and not counted.
+    behaviour.static = True
+    static_fix, static_check = behaviour.findings()
+    assert len(static_fix) == len(fix) - 1
+    assert static_check == ["Clicking button.help changed nothing on the page, which is declared a static mockup"]
+    behaviour.static = False
     # When the page runs off, the parts past the edge are named, so the fix is one write.
     named = Behaviour(width=390, long_text={"changed": 3, "excess": 18, "spill": [], "past": [{"where": "span.price", "by": 18}]})
     assert named.findings()[0] == [
@@ -504,8 +512,18 @@ def test_what_a_click_did_becomes_a_sentence_against_the_rules():
     report = DesignReport(shown="design/a.html", widths=[1440, 390], behaviour=behaviour)
     assert report.issues == len(fix)
     assert report.facts()["design_behaviour"] == len(fix) and report.facts()["design_dead_clicks"] == 2
-    assert ", 5 control(s) clicked at 390 px: 8 to fix." in report.text()
-    assert "- To check: Clicking button.help changed nothing" in report.text()
+    assert ", 5 control(s) clicked at 390 px: 9 to fix." in report.text()
+    assert report.facts()["design_static"] is False
+
+
+def test_a_page_says_it_is_a_static_mockup_in_its_head():
+    from harness.tools.design.behaviour import is_static
+
+    assert is_static('<head><meta name="design-fidelity" content="static"></head>')
+    assert is_static("<meta content='static' name='design-fidelity' />")
+    assert not is_static('<meta name="viewport" content="width=device-width">')
+    assert not is_static('<meta name="design-fidelity" content="prototype">')
+    assert not is_static("<p>a static mockup of the screen</p>")
 
 
 def test_what_runs_besides_the_measuring_follows_the_page():
@@ -549,6 +567,63 @@ def test_dark_promised_by_design_md_and_missing_from_the_page_is_a_fix(tmp_path)
 
 
 @pytest.mark.skipif(find_browser() is None, reason="no Chromium on this machine")
+def test_a_control_that_only_restyles_or_sets_a_field_answered_and_one_that_does_nothing_is_a_fix(tmp_path):
+    """In a real browser: a swatch that sets an inline colour and a stepper that sets an
+    input's value both answered; a button with no handler did not, and on a prototype that is a fix."""
+    (tmp_path / "DESIGN.md").write_text("Accent #74358c, ink #1e1a24, canvas #faf9fb.", encoding="utf-8")
+    folder = tmp_path / "design"
+    folder.mkdir()
+    page = (
+        "<!doctype html><html><head><meta charset='utf-8'><style>body{font-family:sans-serif;color:#1e1a24;"
+        "background:#faf9fb} button{min-height:44px;min-width:44px;margin:8px}</style></head><body>"
+        "<div id='swatch' style='width:80px;height:40px;background:#faf9fb'></div>"
+        "<button class='paint' onclick=\"document.getElementById('swatch').style.background='#74358c'\">Paint</button>"
+        "<input id='qty' aria-label='Quantity' value='1'>"
+        "<button class='more' onclick=\"document.getElementById('qty').value='2'\">Add one</button>"
+        "<button class='nothing'>Buy now</button>"
+        "</body></html>"
+    )
+    (folder / "shop.html").write_text(page, encoding="utf-8")
+    report = check_page(folder / "shop.html", shown="s", roots=[tmp_path])
+    assert not report.error, report.error
+    dead = [entry["where"] for entry in report.behaviour.interactions if entry.get("dead")]
+    assert dead == ["button.nothing"]
+    fix, _ = report.behaviour.findings()
+    assert any(line.startswith("Clicking button.nothing changed nothing") for line in fix)
+    (folder / "shop.html").write_text(page.replace("<head>", "<head><meta name='design-fidelity' content='static'>"), encoding="utf-8")
+    static = check_page(folder / "shop.html", shown="s", roots=[tmp_path])
+    assert static.behaviour.static and not any("button.nothing" in line for line in static.behaviour.findings()[0])
+
+
+@pytest.mark.skipif(find_browser() is None, reason="no Chromium on this machine")
+def test_the_choice_already_made_is_not_tried_and_a_lone_pressed_toggle_still_is(tmp_path):
+    """The kit's billing toggle, Monthly pressed and Yearly not, read as a dead Monthly button once a
+    still control became a fix. The pressed one of a set, the selected tab and the
+    current page are choices made; a lone pressed toggle is a control that turns off."""
+    (tmp_path / "DESIGN.md").write_text("Accent #74358c, ink #1e1a24, canvas #faf9fb.", encoding="utf-8")
+    folder = tmp_path / "design"
+    folder.mkdir()
+    flip = "this.setAttribute('aria-pressed', String(this.getAttribute('aria-pressed') !== 'true'))"
+    page = (
+        "<!doctype html><html><head><meta charset='utf-8'><style>body{font-family:sans-serif;color:#1e1a24;"
+        "background:#faf9fb} button,a{display:inline-block;min-height:44px;min-width:44px;margin:8px}</style></head><body>"
+        "<div role='group' aria-label='Billing'>"
+        "<button class='monthly' aria-pressed='true'>Monthly</button>"
+        "<button class='yearly' aria-pressed='false' onclick=\"this.setAttribute('aria-pressed','true')\">Yearly</button></div>"
+        "<div role='tablist'><button role='tab' class='first' aria-selected='true'>One</button></div>"
+        "<a class='here' href='#top' aria-current='page'>Home</a>"
+        f"<p><button class='bold' aria-pressed='true' onclick=\"{flip}\">Bold</button></p>"
+        "</body></html>"
+    )
+    (folder / "plans.html").write_text(page, encoding="utf-8")
+    report = check_page(folder / "plans.html", shown="s", roots=[tmp_path])
+    assert not report.error, report.error
+    tried = {entry["where"] for entry in report.behaviour.interactions}
+    assert tried == {"button.yearly", "button.bold"}, tried
+    assert not any(entry.get("dead") for entry in report.behaviour.interactions)
+    assert not any("changed nothing" in line for line in report.behaviour.findings()[0])
+
+
 def test_a_real_page_is_clicked_through_and_a_good_one_passes(tmp_path):
     (tmp_path / "DESIGN.md").write_text(
         "Accent #74358c, ink #1e1a24, canvas #faf9fb, panel #ffffff, line #d8d2de. Manrope everywhere.", encoding="utf-8"
@@ -566,7 +641,7 @@ def test_a_real_page_is_clicked_through_and_a_good_one_passes(tmp_path):
     assert "Nothing closes div.dialog: not Esc, not a click outside" in fix
     assert any(line.startswith("In dark mode, text under 3:1: h1") for line in fix)
     assert any(line.startswith("With longer text") for line in fix)
-    assert any("button.help" in line for line in check)
+    assert any("button.help" in line for line in fix)  # a still button is a fix on a prototype
     # The light measurement stays light on a machine set to dark.
     assert not any(item["fg"] == "#3a3540" for item in broken.contrast)
     good = check_page(folder / "interactions_good.html", shown="g", roots=[tmp_path])

@@ -5,6 +5,9 @@ from __future__ import annotations
 import logging
 from typing import Any, Iterable, Optional
 
+from harness.llm.providers.base import CACHE_SEGMENTS
+
+from .parts import part_ends, render_parts
 from .plans import render_standing_plan
 from .record import CompactionState
 from .summarizer import CONTINUATION_CONTRACT
@@ -15,19 +18,20 @@ logger = logging.getLogger("harness.context.compaction")
 _IMAGE_PART_TYPES = frozenset({"image_url", "input_image", "image"})
 
 
+#: The block's first lines, the same for any number of parts: a cut that adds one must not
+#: change what stands before the earlier ones.
+BLOCK_OPENING = "\n".join([
+    "<compacted-history>",
+    "Earlier turns of this session were compacted. The parts below are your memory of them, oldest "
+    "first, each written when its turns were cut: where two disagree, the later is right.",
+    "",
+    "",
+])
+
+
 def compacted_block(state: CompactionState) -> str:
     """The single outbound message standing in for everything before the boundary."""
-    parts = [
-        "<compacted-history>",
-        "Earlier turns of this session were compacted. The summary below is your memory of them."
-        if len(state.parts) <= 1
-        else (
-            "Earlier turns of this session were compacted. The parts below are your memory of them, "
-            "oldest first, each written when its turns were cut: where two disagree, the later is right."
-        ),
-        "",
-        state.summary_text,
-    ]
+    parts = [BLOCK_OPENING + state.summary_text]
     if state.working_state:
         parts += ["", state.working_state]
     if state.harness_record:
@@ -168,5 +172,19 @@ def apply_to_outbound(
     head: list[dict[str, Any]] = []
     if pruned and pruned[0].get("role") == "system":
         head.append(pruned[0])
-    head.append({"role": "user", "content": compacted_block(state)})
+    block: dict[str, Any] = {"role": "user", "content": compacted_block(state)}
+    segments = block_segments(state)
+    if segments:
+        block[CACHE_SEGMENTS] = segments
+    head.append(block)
     return head + pruned[boundary:]
+
+
+def block_segments(state: CompactionState) -> list[int]:
+    """Where each part ends in `compacted_block(state)`, for a provider that caches by explicit
+    breakpoints. Empty when the block's text is not the current rendering of its parts:
+    a state saved before parts were rendered this way keeps the text it was sent with, and offsets
+    computed from its parts would cut it in the wrong places."""
+    if not state.parts or state.summary_text != render_parts(state.parts):
+        return []
+    return [len(BLOCK_OPENING) + end for end in part_ends(state.parts)]

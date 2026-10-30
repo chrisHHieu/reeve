@@ -11,6 +11,8 @@ from harness.session.turns import attachment_message
 from harness.tools.contract import safe_facts, safe_present_result, safe_render
 from harness.tools.design import design_card
 from harness.tools.design.drift import drift_text
+from harness.tools.pipeline import INTERRUPTED
+from harness.tools.presentation import ToolPresentation
 from harness.tools.todo import TODO_WRITE
 
 from .code_changes import CODE_WRITE_TOOLS
@@ -19,11 +21,12 @@ from .post_edit import lsp_diagnostics_note, syntax_note
 from .result_text import _refusal_text, _reports_error
 
 # Result keys the runtime owns and the model, or a `run_code` program, must never read: `_display`
-# (user-facing filter metadata), `_attach` (media that travels by a user-role message) and
-# `_card_meta` (structured facts for the surface card). It is one definition because two paths need
-# the same rule, `_record_result` for a direct call and `_handle_run_code` for a sub-call, and a
-# second copy of it (or none) is how a program began receiving results with `_card_meta` doubled.
-_SIDECAR_KEYS = ("_display", "_attach", "_card_meta")
+# (user-facing filter metadata), `_attach` (media that travels by a user-role message), `_card_meta`
+# (structured facts for the surface card) and `_shown` (the files a refusal showed). It is
+# one definition because two paths need the same rule, `_record_result` for a direct call and
+# `_handle_run_code` for a sub-call, and a second copy of it (or none) is how a program began
+# receiving results with `_card_meta` doubled.
+_SIDECAR_KEYS = ("_display", "_attach", "_card_meta", "_shown")
 
 
 def lift_sidecars(result: Any) -> "tuple[Any, Optional[dict], Optional[list], Optional[dict]]":
@@ -57,6 +60,7 @@ class ResultRecordingMixin:
             # appear on the receipt (item 4.1).
             if self.changes is not None:
                 self.changes.confirm(tool_call.id)
+        shown = result.get("_shown") if isinstance(result, dict) else None
         result, display, attach, card_meta = lift_sidecars(result)
         # A design page this call wrote was checked before it got here (`design_checks.py`). The
         # screenshots go to the model only when there is something to fix, and pass the same
@@ -107,7 +111,13 @@ class ResultRecordingMixin:
             result,
             design="\n\n".join([report.text() for report in designs] + ([drift_text(drifts)] if drifts else [])) or None,
         )
+        unbounded = rendered
         rendered, result = self._enforce_turn_budget(tool_call, rendered, result, facts)
+        if shown and rendered == unbounded:
+            # A refusal that showed a file is a read of it, here and nowhere else: this is
+            # where the text joins the model's messages, and only when the bound left it whole. A
+            # program's sub-call never gets here, and its model never saw the file.
+            self._observe_shown(shown)
         # Observed against what the model is about to read, not the raw value: two calls that showed
         # the model different text did different work, whatever the value underneath looked like.
         reminder = self.repeats.observe(
@@ -204,6 +214,12 @@ class ResultRecordingMixin:
         # What a person reads about what just happened. `result_preview` stays as the fallback every
         # tool not yet migrated still renders through.
         shown = safe_present_result(contract, tool_call.name, tool_call.arguments, result, card_meta)
+        if status == INTERRUPTED:
+            # A call cut by a Stop carries the dispatch's own result (loop/dispatch.py), not the
+            # tool's, so its presenter can only misread it: run_shell's saw an error with no exit
+            # code and said "Command could not start" under a command that had run for four
+            # minutes, and the person took it for a crash (2026-10-26). Said once, for every tool.
+            shown = ToolPresentation(summary="Stopped before it finished", kind=shown.kind if shown else "other")
         short = preview(result)
         # A preview that was cut is the first 300 characters of the result's JSON with its
         # newlines escaped: a live row drew that fragment as the call's output, cut mid-value and
@@ -257,6 +273,14 @@ class ResultRecordingMixin:
                 **({"standing_rule": rule} if rule else {}),
             },
         )
+
+    def _observe_shown(self, shown: Any) -> None:
+        """Record each (path, digest) a refusal showed as seen whole, at the version shown."""
+        if self.observed is None or not isinstance(shown, list):
+            return
+        for entry in shown:
+            if isinstance(entry, (list, tuple)) and len(entry) == 2:
+                self.observed.observe(str(entry[0]), digest=str(entry[1]))
 
     @staticmethod
     def _duration_field(timing: Any) -> dict[str, int]:

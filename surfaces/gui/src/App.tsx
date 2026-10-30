@@ -73,6 +73,7 @@ import {
 } from "./subagents";
 import { planFromMessages } from "./todoPlan";
 import { emptyUsage, formatTokens, usageFromMessages } from "./usage";
+import { compactingWords as compactingWordsFor } from "./components/session/compactingWords";
 import { compactNow, revealArtifact, undoToolCall } from "./api";
 import { touchedFilesOf } from "./components/composer/atMenu";
 import { SEE_CHANGES_EVENT } from "./seeChanges";
@@ -244,6 +245,7 @@ export function App() {
     goal,
     compacting,
     compactingSince,
+    compactingWhy,
     compactNote,
     connected,
     revert: revertMarker,
@@ -2183,7 +2185,7 @@ export function App() {
   // before the folder.
   const touchedFiles = useMemo(() => touchedFilesOf(items, workspace ?? undefined), [items, workspace]);
   // What a compaction works through, said the same on the turn's line and the one between turns.
-  const compactingWords = `Compacting the conversation${usage.context > 0 ? ` · ${formatTokens(usage.context)} tokens` : ""}`;
+  const compactingWords = compactingWordsFor(compactingWhy, usage.context);
   // How full the conversation is, for "Nothing to compact yet".
   const contextWords =
     usage.context > 0

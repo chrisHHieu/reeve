@@ -1,7 +1,7 @@
 {
   "name": "reeve-gui",
   "private": true,
-  "version": "1.2.1",
+  "version": "1.2.3",
   "description": "Reeve, a local-first coding agent",
   "author": "Reeve",
   "type": "module",

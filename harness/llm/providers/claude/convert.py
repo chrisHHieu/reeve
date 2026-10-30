@@ -9,6 +9,10 @@ What the API wants differently from chat completions, and what this module does 
 - Thinking blocks must be sent back unchanged, signature included, ahead of the turn's
   tool calls. They travel on the stored assistant message as the `_anthropic` sidecar, with the
   prefix they were written after (`binding.py`).
+- A cache entry exists only where a breakpoint was written, and a hit is looked for at block
+  boundaries. The compacted block names where its parts end (`CACHE_SEGMENTS`): each
+  part becomes a text block of its own and the last is marked (`CACHE_POINT`), so the request after
+  the next cut finds the earlier parts at a boundary an earlier request wrote.
 """
 
 from __future__ import annotations
@@ -17,7 +21,12 @@ import re
 from typing import Any, Optional
 
 from ..arguments import parse_arguments
+from ..turns import CACHE_SEGMENTS
 from .binding import PREFIX_KEY
+
+#: Private key on the text block a breakpoint goes on, turned into `cache_control` by
+#: `request.add_cache_breakpoints`, which takes it off.
+CACHE_POINT = "_cache_point"
 
 _IMAGE_DATA_URL = re.compile(r"^data:(image/[a-z0-9.+-]+);base64,(.+)$", re.IGNORECASE | re.DOTALL)
 _PDF_DATA_URL = re.compile(r"^data:application/pdf;base64,(.+)$", re.IGNORECASE | re.DOTALL)
@@ -54,8 +63,24 @@ def _document(part: dict[str, Any]) -> Optional[dict[str, Any]]:
     return block
 
 
-def _user_content(content: Any) -> list[dict[str, Any]]:
+def _segmented(text: str, ends: Any) -> list[dict[str, Any]]:
+    """`text` as one block per segment, the last part marked for a breakpoint. Offsets that do
+    not fit the text leave it whole: a breakpoint is worth less than a wrong cut."""
+    if (not isinstance(ends, list) or not ends or not all(isinstance(end, int) for end in ends)
+            or ends != sorted(set(ends)) or ends[0] <= 0 or ends[-1] > len(text)):
+        return [_text(text)]
+    starts = [0, *ends]
+    blocks = [_text(text[a:b]) for a, b in zip(starts, ends)]
+    blocks[-1][CACHE_POINT] = True
+    if ends[-1] < len(text):
+        blocks.append(_text(text[ends[-1]:]))
+    return blocks if all(block["text"].strip() for block in blocks) else [_text(text)]
+
+
+def _user_content(content: Any, segments: Any = None) -> list[dict[str, Any]]:
     if isinstance(content, str):
+        if segments and content:
+            return _segmented(content, segments)
         return [_text(content)] if content else []
     blocks: list[dict[str, Any]] = []
     for part in content or []:
@@ -114,7 +139,7 @@ def convert_messages(messages: list[dict[str, Any]]) -> tuple[Optional[str], lis
                 converted.append({"role": "user",
                                   "content": [_text(f"<system>\n{message['content']}\n</system>")]})
         elif role == "user":
-            blocks = _user_content(message.get("content"))
+            blocks = _user_content(message.get("content"), message.get(CACHE_SEGMENTS))
             if blocks:
                 converted.append({"role": "user", "content": blocks})
         elif role == "assistant":

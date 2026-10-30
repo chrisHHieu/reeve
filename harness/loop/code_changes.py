@@ -7,7 +7,7 @@ change), and has something run since that exercises it.
 from __future__ import annotations
 
 import re
-from typing import Any
+from typing import Any, Optional
 
 from harness.safety.risk import WRITE_TOOLS
 
@@ -83,14 +83,16 @@ def is_code_write(name: str, arguments: Any) -> bool:
     return any(path.lower().endswith(CODE_SUFFIXES) for path in code_paths(name, arguments))
 
 
-def exercises_change(name: str, arguments: Any, stems: "set[str]") -> bool:
+def exercises_change(name: str, arguments: Any, stems: "set[str]", folders: "tuple[str, ...]" = ()) -> bool:
     """Whether a successful evidence-tool call counts as having exercised the code change.
 
     Any `run_shell` used to count, so `cat calc.py` or `git diff` after an edit silenced the
     verification gate (2026-09-25 audit, W13). A shell command now counts when it is a check
-    (`verification.is_verification_command`) or runs a file changed this turn, meaning its stem
-    appears in the command (`python calc.py`, `node build.js`). The other evidence tools execute code
-    by nature and still count."""
+    (`verification.is_verification_command`), runs a file changed this turn, meaning its stem
+    appears in the command (`python calc.py`, `node build.js`), or runs a script that imports one
+    (`python build.py` after an edit to the `extra_sheets.py` it imports). `folders` are where a
+    relative script path is looked for. The other evidence tools execute code by nature and still
+    count."""
     if name != "run_shell":
         return True
     from harness.loop.verification import is_verification_command
@@ -100,10 +102,71 @@ def exercises_change(name: str, arguments: Any, stems: "set[str]") -> bool:
         return False
     if is_verification_command(command):
         return True
-    for segment in re.split(r"&&|\|\||[;|\n]", command.lower()):
-        words = segment.split()
+    for segment in re.split(r"&&|\|\||[;|\n]", command):
+        lowered = segment.lower()
+        words = lowered.split()
         if not words or " ".join(words[:2]).startswith(VIEWERS) or words[0] in VIEWERS:
             continue
-        if any(stem and stem in segment for stem in stems):
+        if any(stem and stem in lowered for stem in stems):
+            return True
+        if _runs_an_importer(segment, stems, folders):
             return True
     return False
+
+
+# How much of a script is read to see what it imports: imports sit at the top, and a generated
+# file of megabytes is not a script anyone runs to check a change.
+SCRIPT_SCAN_CHARS = 200_000
+_SCRIPT = re.compile(r"""["']?([^\s"'<>|]+\.(?:py|mjs|cjs|js|ts|tsx|jsx|ps1|psm1|sh|bash))["']?""", re.IGNORECASE)
+_JS = (".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx")
+
+
+def _runs_an_importer(segment: str, stems: "set[str]", folders: "tuple[str, ...]") -> bool:
+    """Whether a script this segment names imports a file changed this turn, one level deep.
+
+    The gate's first rule only saw a changed file named in the command, so a turn that wrote a
+    helper module and ran the script importing it was called unverified (session 90e83048-f57,
+    2026-10-29: `extra_sheets.py` written, `python build_proposal.py` run twice with exit 0)."""
+    if not stems:
+        return False
+    for match in _SCRIPT.finditer(segment):
+        source = _script_text(match.group(1), folders)
+        if source is None:
+            continue
+        suffix = match.group(1).lower().rsplit(".", 1)[-1]
+        for stem in stems:
+            if stem and _imports(source, stem, "." + suffix):
+                return True
+    return False
+
+
+def _script_text(raw: str, folders: "tuple[str, ...]") -> Optional[str]:
+    from pathlib import Path
+
+    spelled = re.sub(r"^/([a-zA-Z])/", r"\1:/", raw)  # Git Bash's /c/Users is C:/Users
+    candidate = Path(spelled).expanduser()
+    for path in [candidate] if candidate.is_absolute() else [Path(folder) / candidate for folder in folders]:
+        try:
+            if path.is_file():
+                with open(path, encoding="utf-8", errors="replace") as handle:
+                    return handle.read(SCRIPT_SCAN_CHARS)
+        except OSError:
+            continue
+    return None
+
+
+def _imports(source: str, stem: str, suffix: str) -> bool:
+    """An import of the module in the script's own language, or the changed file named with its
+    extension: `exec(open("extra_sheets.py").read())` in the session that found this, `runpy`, a
+    subprocess, PowerShell dot-sourcing, a shell's `source`. A bare mention of the name is neither."""
+    name = re.escape(stem)
+    named = rf"\b{name}\.(?:{'|'.join(suffix.lstrip('.') for suffix in CODE_SUFFIXES)})\b"
+    if re.search(named, source, re.IGNORECASE):
+        return True
+    if suffix == ".py":
+        pattern = rf"^\s*(?:from|import)\s+[^\n#]*\b{name}\b"
+    elif suffix in _JS:
+        pattern = rf"""(?:require\s*\(|import\s*\(|from\s+|import\s+)['"](?:[^'"]*/)?{name}(?:\.\w+)?['"]"""
+    else:
+        return False
+    return re.search(pattern, source, re.IGNORECASE | re.MULTILINE) is not None

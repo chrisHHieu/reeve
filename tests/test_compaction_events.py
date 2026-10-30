@@ -21,6 +21,7 @@ from harness.session.session_log import SessionLog
 from harness.tools import ToolRegistry
 
 from summary_fixtures import valid_summary
+from harness.context.compaction import part as _part, render_parts as _render_parts
 
 SUMMARY = valid_summary("keep building the report")
 
@@ -157,7 +158,7 @@ def test_a_summarized_compaction_is_a_balanced_transaction(tmp_path):
     assert summary["boundary"] > 0
     assert summary["saved_tokens"] > 0 and summary["saved_pct"] > 0
     assert summary["after_tokens"] < summary["before_tokens"]
-    assert summary["summary_chars"] == len(SUMMARY)
+    assert summary["summary_chars"] == len(_render_parts([_part(SUMMARY)]))
     assert engine.log.dangling_compactions() == 0
 
     # The payoff: a compacted session no longer reports its own correct behaviour as a
@@ -422,7 +423,7 @@ def test_the_persisted_notice_carries_the_numbers(tmp_path):
     )
     assert notice.get("saved_tokens", 0) > 0
     assert notice.get("reason") == "summarized"
-    assert notice.get("summary") == SUMMARY
+    assert notice.get("summary") == _render_parts([_part(SUMMARY)])
 
 
 class APIConnectionError(Exception):

@@ -199,6 +199,40 @@ def test_a_shell_command_counts_only_when_it_exercises_the_change(tmp_path):
     assert engine._turn_ran_after
 
 
+def test_running_a_script_that_imports_the_changed_module_exercises_it(tmp_path):
+    # Session 90e83048-f57 (2026-10-29): the turn wrote `valuation/extra_sheets.py`, then ran
+    # `python .../valuation/build_proposal.py`, which imports it, twice with exit 0, and the turn
+    # was still called unverified: only a changed file NAMED in the command counted.
+    folder = tmp_path / "valuation"
+    folder.mkdir()
+    (folder / "build_proposal.py").write_text("import json\nfrom extra_sheets import add_sheets\n", encoding="utf-8")
+    (folder / "unrelated.py").write_text("print('extra_sheets is mentioned only here')\n", encoding="utf-8")
+    (folder / "build.ts").write_text("import { add } from './extra_sheets';\n", encoding="utf-8")
+    (folder / "loader.py").write_text('exec(open(OUT + "extra_sheets.py").read())\n', encoding="utf-8")
+    # Commands name scripts relative to where the shell stands: the temp folder's own path says
+    # "pytest", which would make any command naming it a check.
+    engine, _ = _engine(tmp_path, [])
+    engine.executor = type("Shell", (), {"cwd": str(folder)})()
+    for importer in ("build_proposal.py", "loader.py", "build.ts"):
+        engine._note_tool_outcome("write_file", {"path": "valuation/extra_sheets.py"}, "ok")
+        for not_a_run in ("python unrelated.py", f"cat {importer}", "git diff"):
+            engine._note_tool_outcome("run_shell", {"command": not_a_run}, "ok")
+            assert not engine._turn_ran_after, not_a_run
+        runner = "npx tsx" if importer.endswith(".ts") else ".venv/Scripts/python.exe"
+        engine._note_tool_outcome("run_shell", {"command": f'cd "$X" && {runner} {importer} 2>&1 | grep -v Warn'}, "ok")
+        assert engine._turn_ran_after, importer
+
+
+def test_a_git_bash_path_to_the_script_is_read_where_windows_keeps_it(tmp_path):
+    from harness.loop.code_changes import _script_text
+
+    script = tmp_path / "run.py"
+    script.write_text("import helper\n", encoding="utf-8")
+    posix = script.as_posix()
+    spelled = f"/{posix[0].lower()}{posix[2:]}" if posix[1:2] == ":" else posix
+    assert _script_text(spelled, ()) == "import helper\n"
+
+
 # -- end to end: what a finish is called ----------------------------------------
 
 

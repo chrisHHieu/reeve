@@ -210,10 +210,11 @@ class MainLoopMixin:
         """Between tool turns, and before a new turn's first call: compact when it is due, else do
         the free cache-cold prune. There is deliberately no "wrap up" warning to the model."""
         notice = None
-        if self._compaction_due():
+        why = self._compaction_why()
+        if why:
             # The COMPACTING signal comes before the summarizer call, which takes seconds, so
-            # surfaces can show progress and not a silent stall.
-            yield Event(EventType.COMPACTING, {})
+            # surfaces can show progress and not a silent stall, and why it runs.
+            yield Event(EventType.COMPACTING, {"why": why, "tokens": self._context_signal()})
             notice = await self._compact_now()
         else:
             # The cache-cold pass (`_opportunistic_prune`): aged tool results fold for free, and only
@@ -295,7 +296,8 @@ class MainLoopMixin:
             # round trip (an estimate when it was never reported). It is stamped before the assistant
             # message is appended, so everything from here on, this turn's text and its tool results,
             # counts as the delta `_context_signal` adds.
-            self._record_context_measure(turn.usage.context_tokens)
+            cleared = int((turn.context_cleared or {}).get("input_tokens") or 0)
+            self._record_context_measure(turn.usage.context_tokens, cleared=cleared)
             self._fold_cache_probe(turn.usage)
             # The token budget's counter, accumulated where the provider's own numbers land. `total`
             # counts cache reads too (see `TokenUsage.total`), because the expensive loop is the one
@@ -341,6 +343,13 @@ class MainLoopMixin:
             usage=turn.usage.as_dict() if turn.usage is not None else None,
             timing=timing,
             tool_calls=[{"call_id": call.id, "name": call.name} for call in turn.tool_calls] or None,
+            # What the provider said of this request's prefix against the conversation's previous
+            # one, so a cache miss is told apart: the harness changed it, or the provider
+            # dropped an entry the request matched.
+            cache_miss=turn.cache_miss,
+            # What the provider cleared from this request before the model read it: the
+            # model saw less than was sent, and `usage` counts what it saw.
+            context_cleared=turn.context_cleared,
         )
         if turn.thinking_dropped:
             # The request went without some of the model's own thinking. The model saw
@@ -400,6 +409,7 @@ class MainLoopMixin:
 
         self._nudge_todo(turn)
         self._maybe_fold_hint()
+        self._maybe_context_ledger()  # off unless configured
 
         self.log.append("step/end", turn=self._turn_no, step=self._step_no)
         yield Event(EventType.ITERATION_END, {"iteration": state.iterations})

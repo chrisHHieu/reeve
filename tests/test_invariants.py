@@ -232,11 +232,11 @@ def test_a_tool_turn_leaves_the_log_fully_covering_the_request(tmp_path):
     assert _violations(engine.log) == []
     kinds = {e["type"] for e in engine.log.read()}
     assert {"user/message", "assistant/message", "tool/result"} <= kinds
-    # The call never STARTED (denied before dispatch, where `_log_call` runs), so the
-    # the log names it through its result alone: status `denied`, same call id.
-    assert "tool/call" not in kinds
-    denied = next(e for e in engine.log.read() if e["type"] == "tool/result")
-    assert denied["status"] == "denied" and denied["call_id"] == "c1"
+    # The call never started, and its arguments are still in every later request: it is
+    # logged as it is denied, then its result says how it ended.
+    rows = [e for e in engine.log.read() if e["type"] in ("tool/call", "tool/result")]
+    assert [(e["type"], e["call_id"]) for e in rows] == [("tool/call", "c1"), ("tool/result", "c1")]
+    assert rows[1]["status"] == "denied"
 
 
 def test_an_unlogged_injection_is_recorded_once_per_distinct_gap(tmp_path):

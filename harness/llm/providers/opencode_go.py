@@ -28,8 +28,12 @@ from .chat import OpenAIProvider
 from .gemini import GeminiProvider
 from .responses import OpenAIResponsesProvider
 
-#: The gateway wants a routing session on EVERY request, whatever the wire.
-_SESSION_HEADER = "x-opencode-session"
+#: The gateway wants a routing session on EVERY request, whatever the wire. OpenCode's own client
+#: (`packages/core/src/session/model-request.ts`, read 2026-10-26) also sends the session's affinity
+#: as `x-session-affinity` and `X-Session-Id`, which a gateway can pass to the upstream that serves
+#: the model. Sent the same way here, all three with the one value. Their effect on DeepSeek's cache
+#: is the store's to say (prediction `opencode-affinity-headers`).
+_SESSION_HEADER = ("x-opencode-session", "x-session-affinity", "X-Session-Id")
 
 #: The gateway's own host. A base here is routed by the catalogue's endpoints.
 _GATEWAY_HOST = "opencode.ai"

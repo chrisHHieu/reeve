@@ -39,8 +39,18 @@ class FinishGatesMixin:
                 for path in code_paths(name, arguments)
                 if path.lower().endswith(CODE_SUFFIXES)
             }
-        elif name in EVIDENCE_TOOLS and exercises_change(name, arguments, getattr(self, "_turn_code_stems", set())):
+        elif name in EVIDENCE_TOOLS and exercises_change(
+            name, arguments, getattr(self, "_turn_code_stems", set()), self._script_folders()
+        ):
             self._turn_ran_after = True
+
+    def _script_folders(self) -> tuple[str, ...]:
+        """Where a script a command names by a relative path is found: where the shell stands, then
+        the workspace. Used to read whether that script imports a changed file."""
+        folders = [getattr(getattr(self, "executor", None), "cwd", None)]
+        permissions = getattr(self, "permissions", None)
+        folders.append(str(permissions.workspace_root) if permissions is not None else None)
+        return tuple(folder for folder in folders if folder)
 
     def _completion_reason(self) -> TurnEndReason:
         """How a finish is named; this is the verification gate's whole output.

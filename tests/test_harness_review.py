@@ -12,8 +12,8 @@ harness_review = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(harness_review)  # type: ignore[union-attr]
 
 
-def _log(tmp_path: Path, events: list[dict]) -> Path:
-    path = tmp_path / "s.events.jsonl"
+def _log(tmp_path: Path, events: list[dict], name: str = "s") -> Path:
+    path = tmp_path / f"{name}.events.jsonl"
     path.write_text("\n".join(json.dumps({"seq": i, **e}) for i, e in enumerate(events)), encoding="utf-8")
     return path
 
@@ -132,6 +132,32 @@ def test_a_step_that_went_without_its_own_thinking_is_counted_by_cause_and_a_mod
     assert counts["thinking-drops"] == 2 and counts["steps"] == 3
     assert [ref[2] for ref in refs["thinking-drops"]] == ["stale", "api+retried"]
     assert counts["thinking blocks dropped stale"] == 2 and counts["thinking blocks dropped retried"] == 3
+
+
+def test_a_stale_thought_left_out_of_every_later_request_is_one_loss_not_one_a_step(tmp_path):
+    # The store's first reading: one session's 3-13 stale blocks, re-sent without on every step,
+    # counted as 314 steps that lost thinking. A row that says `stale_new` is read by it; an older
+    # row by how far `stale` rose in its log.
+    older = _log(tmp_path, [
+        {"type": "assistant/message", "t": 1},
+        {"type": "thinking/dropped", "stale": 3},
+        {"type": "assistant/message", "t": 2},
+        {"type": "thinking/dropped", "stale": 3},
+        {"type": "assistant/message", "t": 3},
+        {"type": "thinking/dropped", "stale": 5},
+    ], "older")
+    newer = _log(tmp_path, [
+        {"type": "assistant/message", "t": 1},
+        {"type": "thinking/dropped", "stale": 2, "stale_new": 2},
+        {"type": "assistant/message", "t": 2},
+        {"type": "thinking/dropped", "stale": 2, "stale_new": 0},
+        {"type": "assistant/message", "t": 3},
+        {"type": "thinking/dropped", "stale": 1, "stale_new": 1},
+    ], "newer")
+    counts, refs = harness_review.review([older, newer])
+    assert counts["thinking-drops"] == 4
+    assert counts["thinking blocks dropped stale"] == 3 + 2 + 2 + 1
+    assert counts["thinking blocks re-dropped stale"] == (3 + 3) + 2
 
 
 def test_a_cache_drop_after_a_prune_is_the_harness_own(tmp_path):
@@ -508,6 +534,29 @@ def test_a_cut_is_judged_by_what_the_block_before_it_held(tmp_path):
     assert counts["parts-over-budget"] == 1 and counts["merges of parts"] == 1
 
 
+def test_a_cut_that_paid_again_for_the_earlier_parts_is_counted(tmp_path):
+    """The floor is what the request after the first cut read; a later cut with
+    earlier parts that reads no more than that paid for them again. Cold, merged, a model
+    switch, or no earlier parts: not judged."""
+    def step(read, model="anthropic:claude-sonnet-5-5"):
+        return {"type": "assistant/message", "t": 5.0, "model": model, "usage": {"cache_read": read, "input": 3_000}}
+
+    def cut(parts_tokens, merged=0):
+        return {"type": "compaction/summary", "t": 5.0, "reason": "folded", "parts_tokens": parts_tokens, "merged": merged}
+
+    log = _log(tmp_path, [
+        step(60_000), cut(4_000), step(20_000),         # first cut: the floor is 20k
+        step(50_000), cut(9_000), step(24_500),         # 4k of earlier parts read: kept
+        step(55_000), cut(13_000), step(21_000),        # 9k earlier, 1k over the floor: paid again
+        step(52_000), cut(10_000, merged=1), step(20_000),  # merged: its parts changed
+        step(0), cut(14_000), step(20_000),             # cold before: says nothing
+        step(40_000), cut(18_000), step(0, model="opencode-go:deepseek-v4.1-flash"),  # a switch
+    ])
+    counts, refs = harness_review.review([log], keep_all="parts-repriced")
+    assert counts["cuts keeping parts"] == 2 and counts["parts-repriced"] == 1
+    assert refs["parts-repriced"][0][2] == "read 21,000, floor 20,000, earlier parts ~9,000"
+
+
 def test_a_compaction_whose_own_price_disagrees_with_the_signal_is_counted(tmp_path):
     def start(before, signal):
         return {"type": "compaction/start", "t": 1.0, "before_tokens": before, "signal": signal}
@@ -803,6 +852,21 @@ def test_a_design_page_left_with_something_to_fix_is_counted_per_page(tmp_path):
     assert counts["design first drafts that misbehave when used"] == 1
 
 
+def test_a_design_page_whose_last_version_still_has_still_controls_is_counted(tmp_path):
+    """Per page and turn, by the last check; a page declared static is not counted."""
+    def check(turn, path, dead, static=False):
+        facts = {"design_checked": True, "design_issues": 0, "design_dead_clicks": dead, "design_static": static}
+        return {"type": "design/check", "turn": turn, "path": path, "facts": facts}
+
+    log = _log(tmp_path, [
+        check(1, "design/a.html", 3), check(1, "design/a.html", 0),   # wired before the answer
+        check(1, "design/b.html", 1), check(1, "design/b.html", 2),   # still dead at the end
+        check(1, "design/c.html", 4, static=True),                    # a picture of a screen
+    ])
+    counts, _ = harness_review.review([log])
+    assert counts["design pages"] == 3 and counts["design pages left with dead clicks"] == 1
+
+
 def test_a_design_page_drawn_before_the_guide_was_read_is_counted_once(tmp_path):
     def check(turn, path, unguided):
         facts = {"design_checked": True, "design_issues": 0, "design_unguided": unguided}
@@ -883,3 +947,56 @@ def test_a_steer_held_by_the_steps_own_wait_is_counted_and_one_held_by_the_model
     counts, refs = harness_review.review([log])
     assert counts["person-steers"] == 2
     assert counts["steer-waits"] == 1 and refs["steer-waits"][0][2] == "run_shell 60s"
+
+
+def test_a_read_of_a_file_the_read_guard_just_refused_is_counted_once(tmp_path):
+    """The read the refusal stands for when it shows the file. A refusal from before
+    refused calls had a `tool/call` row names its file only in its sentence."""
+
+    def result(cid, content, turn=1):
+        return {"type": "tool/result", "call_id": cid, "name": "write_file", "turn": turn, "content": content}
+
+    def read(cid, path, turn=1):
+        return {"type": "tool/call", "call_id": cid, "name": "read_file", "turn": turn,
+                "arguments": json.dumps({"path": path})}
+
+    log = _log(tmp_path, [
+        # the old shape: no tool/call for the refused write
+        result("w1", "Error: tool call blocked by stale-file: web/src/Map.tsx has changed on disk"),
+        read("r1", "D:/p/web/src/Map.tsx"),
+        read("r2", "web/src/Map.tsx"),  # a second read of it is not a second count
+        # the new shape: the refused call is logged
+        {"type": "tool/call", "call_id": "w2", "name": "write_file", "turn": 1,
+         "arguments": json.dumps({"path": "notes.md"})},
+        result("w2", "Error: tool call blocked by read-before-edit: notes.md already exists"),
+        read("r3", "notes.md", turn=2),  # another turn: not the refusal's read
+        result("w3", "Error: tool call blocked by out-of-view: what you read of a.py is no longer"),
+        read("r4", "other.py"),
+    ])
+    counts, refs = harness_review.review([log])
+    assert counts["gate-blocks"] == 3
+    assert counts["gate-block-rereads"] == 1 and refs["gate-block-rereads"][0][1] == 1
+
+
+def test_a_cut_priced_far_past_the_request_last_sent_is_drift_and_a_distrusted_route_is_counted(tmp_path):
+    """The request as sent is the provider's count plus what it said it cleared."""
+
+    def step(prompt, cleared=None):
+        row = {"type": "assistant/message", "t": 1, "usage": {"input": 2, "cache_read": prompt, "cache_write": 0}}
+        if cleared:
+            row["context_cleared"] = {"input_tokens": cleared}
+        return row
+
+    def prune(before):
+        return {"type": "compaction/prune", "reason": "cache_cold", "before_tokens": before, "after_tokens": before // 2}
+
+    log = _log(tmp_path, [
+        step(160_000), prune(320_000),              # twice what was sent: drift
+        step(100_000, cleared=100_000), prune(210_000),  # 200k sent, 34k of it cleared first: not drift
+        prune(900_000),                              # nothing sent since the last cut: not priced
+        {"type": "notice", "kind": "usage_partial", "model": "anthropic-subscription:claude-opus-5-5"},
+    ])
+    counts, refs = harness_review.review([log])
+    assert counts["priced cuts"] == 2
+    assert counts["estimate-drift"] == 1 and refs["estimate-drift"][0][2] == "2.00x"
+    assert counts["usage-distrust"] == 1

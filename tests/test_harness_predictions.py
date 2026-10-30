@@ -99,7 +99,7 @@ def test_the_repositorys_own_ledger_loads_and_names_counts_the_review_produces()
         "compaction-starts", "folds", "fold-item-hints", "fold-hints", "page-fetches",
         "workflow-runs", "tool-lists", "tool-list chars", "system chars", "progress headers",
         "progress header chars", "tool-searches", "tool-describes", "programs", "memory writes saved",
-        "repairs recorded", "repairs recalled",
+        "repairs recorded", "repairs recalled", "cuts keeping parts",
         "repairs asked for a lesson", "memory writes after a lesson was asked for",
         "failed-checks", "unnamed-failures in a whole output", "unnamed-failures cut by its pipe",
         "searched-citing answers", "visual turns", "visuals shown", "searching sessions",
@@ -107,12 +107,18 @@ def test_the_repositorys_own_ledger_loads_and_names_counts_the_review_produces()
         "question turns", "request turns", "requests-without-writes",
         "design pages", "design checks", "design first drafts with issues", "design first drafts off a phone",
         "design first drafts that misbehave when used",
+        # The pages whose last check still had a control doing nothing.
+        "design pages left with dead clicks",
         # A cache drop by its cause (`cache-drops <cause>`), counted beside the detector's total.
         "cache-drops request/header",
         # OpenCode Go's non-chat wires, from the store's own catalogue.
         "gateway-wire prompt tokens", "gateway-wire uncached tokens",
         # The person's messages into a running turn that say how long they waited.
         "person-steers",
+        # OpenCode Go's own steps and its unexplained drops (prediction `opencode-affinity-headers`).
+        "opencode-go steps", "opencode-go unexplained cache-drops",
+        # The prunes and compactions with a request sent before them to price against.
+        "priced cuts",
     }
     known = set(harness_review.DETECTORS) | totals
     for entry in entries:

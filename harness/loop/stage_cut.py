@@ -74,7 +74,7 @@ class StageCutMixin:
         old_upto = self.compaction_state.pruned_upto if self.compaction_state is not None else 0
         arguments = self._arguments_folded(candidate, old_upto, upto)
         self.compaction_state = candidate
-        self._last_context_tokens = None
+        self._forget_context_measure()
         self.log.append(
             "compaction/prune",
             turn=self._turn_no,

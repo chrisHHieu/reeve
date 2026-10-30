@@ -102,9 +102,18 @@ class CompactionMixin:
         session dies of context overflow, so the honest fix was to delete the branch
         rather than wire it.)
         """
+        return bool(self._compaction_why())
+
+    def _compaction_why(self) -> str:
+        """Why a compaction is due now: `full` (the context reached the trigger), `stage` (a stage
+        of the work just ended past half of it, `stage_cut.py`), or "" when none is. A surface says
+        it while the summarizer runs: "Compacting" alone, beside a gauge at a third,
+        read as a gauge that had not caught up."""
         signal = self._context_signal()
         trigger = self._history_trigger_tokens()
-        return signal >= trigger or self._stage_due(signal, trigger)
+        if signal >= trigger:
+            return "full"
+        return "stage" if self._stage_due(signal, trigger) else ""
 
     async def _compact_now(
         self, *, force: bool = False, manual: bool = False
@@ -442,7 +451,7 @@ class CompactionMixin:
             arguments_folded=arguments_folded,
         )
         self.compaction_state = state
-        self._last_context_tokens = None  # stale once the outbound view shrank
+        self._forget_context_measure()  # stale once the outbound view shrank
         if state.ineffective_streak >= compaction.INEFFECTIVE_STREAK_LIMIT:
             logger.warning(
                 "compaction has saved under %.0f%% of the window %d times in a row "
@@ -779,7 +788,7 @@ class CompactionMixin:
             # summarizer keeps `reason` describing the lever that resolved the pressure
             # rather than the one that only helped.
             self.compaction_state = candidate
-            self._last_context_tokens = None
+            self._forget_context_measure()
             return None
         if folded:
             text = (
@@ -892,7 +901,7 @@ class CompactionMixin:
         old_upto = self.compaction_state.pruned_upto if self.compaction_state is not None else 0
         arguments = self._arguments_folded(candidate, old_upto, upto)
         self.compaction_state = candidate
-        self._last_context_tokens = None
+        self._forget_context_measure()
         self.log.append(
             "compaction/prune",
             turn=self._turn_no,

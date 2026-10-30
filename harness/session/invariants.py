@@ -51,6 +51,8 @@ _TAG_EVENTS = {
     "todo_nudge": "todo",
     # The fold hint is rebuilt from its `context/budget` row (`hint: "fold"`).
     "fold_hint": "budget",
+    # The context ledger rides the same rows (`hint: "ledger"`).
+    "context_ledger": "budget",
     "checkpoint": "checkpoint",
     # The output-token continuation's instruction rides in as a `steering/message` event
     # (source "truncation-continue") and is folded away before the turn ends.

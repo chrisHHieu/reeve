@@ -38,10 +38,13 @@ def _ask(text="combined"):
 # -- the parts themselves -------------------------------------------------------------
 
 
-def test_a_state_from_before_parts_is_one_part_and_renders_as_it_did():
+def test_a_state_from_before_parts_is_one_part_and_is_sent_as_it_was():
     old = CompactionState.from_dict({"boundary_index": 3, "summary_text": "the gist", "working_state": ""})
     assert old.parts == [] and parts_of(old) == [part("the gist")]
-    assert render_parts(parts_of(old)) == "the gist"  # a one-part block is byte for byte the old one
+    # Its block keeps the text it was saved with until the next cut renders the parts,
+    # and names no part ends: offsets taken from a rendering it was never sent in would cut it wrongly.
+    assert "\nthe gist" in compaction.compacted_block(old) and "### Part" not in compaction.compacted_block(old)
+    assert compaction.block_segments(old) == []
     new = CompactionState(boundary_index=3, summary_text="", working_state="", parts=[part("a"), part("b", "note", 2)])
     again = CompactionState.from_dict(new.as_dict())
     assert again.parts == [part("a"), part("b", "note", 2)]

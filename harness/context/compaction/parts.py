@@ -71,17 +71,34 @@ def parts_of(state: Any) -> list[dict[str, Any]]:
     return [part(state.summary_text)] if (state.summary_text or "").strip() else []
 
 
+#: What stands between two rendered parts.
+PART_SEPARATOR = "\n\n"
+
+
+def _heading(index: int) -> str:
+    return f"### Part {index}\n"
+
+
 def render_parts(parts: list[dict[str, Any]]) -> str:
-    """The text of the parts as the block carries it. One part is its own text, exactly what a
-    block held before parts existed; more are numbered, oldest first."""
-    if len(parts) <= 1:
-        return parts[0]["text"] if parts else ""
-    total = len(parts)
-    return "\n\n".join(
-        f"### Part {index} of {total}{' (oldest)' if index == 1 else ' (newest)' if index == total else ''}\n"
-        + item["text"]
-        for index, item in enumerate(parts, 1)
-    )
+    """The text of the parts as the block carries it, oldest first, each under its number.
+
+    The rendering of a block's first n parts is a byte prefix of its rendering with n + 1, so a
+    cut that adds a part leaves every earlier one where a provider's cache has it.
+    It used to say "Part 1 of 3 (oldest)", and a lone part had no heading: each cut changed the
+    first line of the first part, and on the store (2026-10-14..26) the request after a later fold
+    read from cache what the request after a session's first fold did, the system prompt and the
+    tools and nothing of the parts (Claude 19.4k against 22.0k, DeepSeek 14.8k against 13.7k).
+    """
+    return PART_SEPARATOR.join(_heading(index) + item["text"] for index, item in enumerate(parts, 1))
+
+
+def part_ends(parts: list[dict[str, Any]]) -> list[int]:
+    """Where each part ends in `render_parts(parts)`, as character offsets."""
+    ends, at = [], 0
+    for index, item in enumerate(parts, 1):
+        at += (len(PART_SEPARATOR) if index > 1 else 0) + len(_heading(index)) + len(item["text"])
+        ends.append(at)
+    return ends
 
 
 def parts_tokens(parts: list[dict[str, Any]]) -> int:
@@ -163,6 +180,8 @@ __all__ = [
     "part",
     "parts_budget",
     "parts_of",
+    "PART_SEPARATOR",
+    "part_ends",
     "parts_tokens",
     "render_parts",
     "summary_target",

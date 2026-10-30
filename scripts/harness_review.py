@@ -15,6 +15,8 @@ detector prints a count, the part of the harness that owns the shape, and a few
     edit-misses       replace_in_file / apply_patch that matched nothing, and how many were
                       retried by the very next call (W9's refusals name the place to look)
     gate-blocks       read-before-edit / partial-read / stale-file / out-of-view refusals, by tool (W12)
+    gate-block-rereads  a read_file of a file the read guard refused in the same turn: the read the
+                      refusal itself can stand for when it shows the file
     deferred-calls    direct calls refused for being behind tool discovery (W5)
     lsp-timeouts      lsp calls that timed out or were skipped after one (W3)
     raw-json-errors   tool results that reached the model as a raw JSON error object
@@ -22,7 +24,13 @@ detector prints a count, the part of the harness that owns the shape, and a few
     cache-drops       a step's cache read falling below half of the previous step's, split
                       by what preceded it (compaction or a prune / toolset change / an undo or redo /
                       another model than the step before / idle past the route's cache
-                      lifetime / unexplained)
+                      lifetime / unexplained). Where the provider read the request (Anthropic's
+                      cache diagnostics), an unexplained drop is `api <reason>` or
+                      `provider dropped` (the request matched the previous one)
+    unmarked-prefix-changes  a cache drop the harness logged no cause for, whose request the
+                      provider says changed (`messages_changed`, `system_changed`,
+                      `tools_changed`, `model_changed`): a prefix this harness rewrote without
+                      knowing it did, per `steps`
 
 Added 2026-10-04 from the harness-optimisation papers (docs/harness-papers-2026-10-04.md).
 "The Scaffold Effect" (arXiv 2607.22585) measures a harness by its NO-ACTION turns — each
@@ -105,7 +113,11 @@ the model ran on a spill file as a second owner of that file.
                       a prune, a new tool list), `api` (the API saw a change the harness did
                       not), `retried` (a 400 refused the blocks). `other_model` alone is a
                       model switch and is not counted. Each one is reasoning the model wrote
-                      and no longer has
+                      and no longer has. A stale block stays out of every request after, so
+                      a step counts only for blocks no earlier request went without
+                      (`stale_new`; before 2026-10-27, by how far `stale` rose in the log).
+                      The re-sends are the detail `thinking blocks re-dropped stale`: the
+                      store's first 314 such steps were one session's 3-13 blocks, once a step
     argument-folds    a prune that folded the write payloads of aged calls; the
                       detail is how many calls. Its cost, if it has one, shows as `edit-misses`
                       (an edit quoting a payload the view no longer holds) and `gate-blocks`
@@ -132,6 +144,11 @@ the model ran on a spill file as a second owner of that file.
                       the parts' own budget replaced that one)
     parts-over-budget a cut whose block's parts stayed above their budget: a merge failed.
                       `merges of parts` in the detail line is how often one ran
+    parts-repriced    a cut that added a part beside earlier ones and merged none, made on a
+                      warm cache, whose next request read from cache less than the route's
+                      floor (what the request after the session's first cut read: the system
+                      prompt and the tools) plus half the earlier parts: they were paid again
+                      in full, per `cuts keeping parts`
     cut-details-lost  concrete details (backticked names, flags, paths, long numbers,
                       snake_case names) a block's memory held that the next cut's block no
                       longer holds, per `cut details`; from the transcript's `compacted`
@@ -147,6 +164,11 @@ the model ran on a spill file as a second owner of that file.
     price-off         a `compaction/start` whose own price of the view (`before_tokens`)
                       is more than a quarter away from the provider-based signal on the
                       same row: the two describe one context
+    estimate-drift    a prune or compaction whose price of the view (`before_tokens`) is past 1.5x
+                      the request the session last sent (the provider's count plus what it said
+                      it cleared first): the engine is pricing text the model does not read, a
+                      gap `price-off` cannot see once the signal is the estimate
+    usage-distrust    a `usage_partial` notice: the engine stopped believing a route's counts
     workflow-refused  a `workflow` call turned away before it ran: an import, a dunder, a
                       blocked call, the meta block (facts `outcome = refused`; a row from
                       before facts by its sentence). Per `workflow-runs`: a run
@@ -248,11 +270,13 @@ OWNER = {
     "unnamed-failures": "tools/checks",
     "edit-misses": "tools/edit surface",
     "gate-blocks": "tools/read guards",
+    "gate-block-rereads": "tools/read guards",
     "deferred-calls": "tools/discovery",
     "lsp-timeouts": "lsp",
     "raw-json-errors": "tools/presenters",
     "unverified-ends": "engine/verify gate",
     "cache-drops": "context/projection",
+    "unmarked-prefix-changes": "context/projection + llm/wire (what the provider says changed)",
     "bookkeeping-steps": "tools/todo + engine/nudge",
     "nudge-alone": "engine/nudge",
     "nudge-no-tool": "engine/nudge",
@@ -269,6 +293,8 @@ OWNER = {
     "reader-cut-pages": "web/ask",
     "steer-waits": "engine/steering",
     "price-off": "engine/context price",
+    "estimate-drift": "engine/context price",
+    "usage-distrust": "engine/context price",
     "page-middle-dropped": "web/pages",
     "page-refetch": "web/pages",
     "fold-unpaid": "engine/context fold",
@@ -277,6 +303,7 @@ OWNER = {
     "fold-hint-small": "engine/context fold",
     "notes-over-budget": "compaction/fold",
     "parts-over-budget": "compaction/parts",
+    "parts-repriced": "compaction/parts + providers/claude cache marks",
     "cut-details-lost": "compaction/parts",
     "fold-unsettled": "engine/context fold",
     "memory-refused": "memory/gate",
@@ -308,6 +335,9 @@ OWNER = {
 DETECTORS = tuple(OWNER)
 #: A person's message that waited this long for its step is one the step held (`steer-waits`).
 STEER_WAIT_MS = 10_000
+#: What Anthropic's cache diagnostics call a changed request; `unchanged` is the harness's
+#: word for a request the provider found matching the previous one.
+API_CHANGED = frozenset({"model_changed", "system_changed", "tools_changed", "messages_changed"})
 #: The waits a person's message releases (`TurnEngine.person_steered`): what can hold one that long.
 STEER_HOLDERS = frozenset({"run_shell", "shell_task_output", "task"})
 #: What a detector's count is a share of, where the docstring above names one: the Metrics page
@@ -321,6 +351,7 @@ PER = {
     "unnamed-failures": "failed-checks",
     "unverified-ends": "turn-ends",
     "cache-drops": "steps",
+    "unmarked-prefix-changes": "steps",
     "bookkeeping-steps": "steps",
     "nudge-alone": "todo-nudges",
     "idle-wakes": "wake-turns",
@@ -333,11 +364,14 @@ PER = {
     "reader-cut-pages": "reader-pages",
     "page-middle-dropped": "page-fetches",
     "fold-unpaid": "folds",
+    "parts-repriced": "cuts keeping parts",
     "fold-own-step": "folds",
     "fold-unsettled": "folds",
     "fold-hint-small": "fold-hints",
     "fold-hint-nothing-open": "fold-item-hints",
     "price-off": "compaction-starts",
+    "estimate-drift": "priced cuts",
+    "usage-distrust": "steps",
     "workflow-refused": "workflow-runs",
     "unknown-tool-programs": "programs",
     "error-ends": "turn-ends",
@@ -421,6 +455,9 @@ _PROMPT_KEYS = ("input", "cache_read", "cache_write")
 #: How far the harness's price of a view may sit from the provider-based signal for the
 #: same context before the row counts as `price-off`.
 PRICE_RANGE = (0.8, 1.25)
+#: How far past the request it last sent the harness may price its view at a cut before the cut
+#: counts as `estimate-drift`. One step's results ride on top of it, hence the width.
+DRIFT = 1.5
 #: What a fold hint needs of the request, and what a session's notes may hold.
 FOLD_HINT_SHARE = 0.5
 NOTES_BUDGET_CHARS = 16_000
@@ -461,6 +498,18 @@ def _unnamed(facts: Optional[dict], text: str, command: str, counts: Counter, hi
         hit(why)
     elif facts is not None and facts.get("setup"):
         counts["failed-checks named by setup"] += 1
+
+
+#: The file a read-guard refusal names, in each of its four sentences (`tools/observed.py`).
+_REFUSED_FILE = re.compile(
+    r"blocked by (?:read-before-edit|partial-read|stale-file|out-of-view): "
+    r"(?:what you read of |you have not read the part of )?(\S+?)[ ,(]"
+)
+
+
+def _file_name(path: str) -> str:
+    """A path's last part, lowercased: a refusal and the read after it may spell one file two ways."""
+    return path.replace("\\", "/").rstrip("/").rsplit("/", 1)[-1].lower()
 
 
 def _arguments(event: dict[str, Any]) -> dict[str, Any]:
@@ -580,6 +629,8 @@ def review(
             if _step_calls(step):
                 acted[step.get("turn")] += 1
         last_missed: Optional[str] = None
+        refused_files: dict[str, Any] = {}  # file name -> the turn the read guard last refused it in
+        last_sent = 0  # the request the session last sent, as the provider priced it
         started_in: Optional[str] = None  # where the log's first shell command ran
         drifted_at: Optional[tuple[Any, Any]] = None  # (turn, step) of the log's last cwd-drift
         last_in: Optional[str] = None  # where the one before this ended
@@ -594,6 +645,7 @@ def review(
         polled_turn: Any = None  # the turn whose last step only asked a background task
         open_items: Optional[int] = None  # on the task list as last written; None = no list
         asked_turn: Any = None  # the turn a lesson was asked for in, until a memory write answers it
+        last_stale = 0  # the stale blocks of the log's last `thinking/dropped` row without `stale_new`
         step_results: list[dict[str, Any]] = []  # tool results so far, read by `steer-waits`
         for event in events:
             kind = event.get("type")
@@ -675,6 +727,10 @@ def review(
                     if event.get("name") == last_missed and counted:
                         counts["edit-misses retried at once"] += 1
                     last_missed = None
+                if event.get("name") == "read_file" and refused_files:
+                    read_name = _file_name(str(_arguments(event).get("path") or ""))
+                    if refused_files.pop(read_name, None) == event.get("turn") and counted:
+                        hit("gate-block-rereads", log, event.get("seq"))
                 if counted and event.get("name") == "task":
                     counts["task-calls"] += 1
                 if counted and event.get("name") == "run_code":
@@ -812,6 +868,13 @@ def review(
                 for rule in ("read-before-edit", "partial-read", "stale-file", "out-of-view"):
                     if f"blocked by {rule}" in text or f'"rule": "{rule}"' in text:
                         hit("gate-blocks", log, event.get("seq"), f"{name}:{rule}")
+                        # A refused call has its own `tool/call` row; in older logs
+                        # its file was named only in the refusal's sentence.
+                        refused_path = str(_arguments(call).get("path") or "")
+                        named = _REFUSED_FILE.search(text) if not refused_path else None
+                        refused_path = named.group(1) if named else refused_path
+                        if refused_path:
+                            refused_files[_file_name(refused_path)] = event.get("turn")
                 if "behind progressive discovery" in text:
                     hit("deferred-calls", log, event.get("seq"))
                 if name == "lsp" and ("timed out" in text or "stopped answering" in text):
@@ -850,12 +913,23 @@ def review(
                     hit("unverified-ends", log, event.get("seq"))
                 elif event.get("reason") == "interrupted":
                     counts["interrupted-ends"] += 1
-            if kind == "thinking/dropped" and counted:
-                causes = [cause for cause in ("stale", "api", "retried") if int(event.get(cause) or 0)]
-                if causes:
+            if kind == "thinking/dropped":
+                # A stale block stays out of every later request, so only its first is a loss.
+                # `stale_new` says which; an older row is read by how far `stale` rose.
+                stale = int(event.get("stale") or 0)
+                if "stale_new" in event:
+                    lost = {"stale": int(event.get("stale_new") or 0)}
+                else:
+                    lost = {"stale": max(0, stale - last_stale)}
+                    last_stale = stale
+                lost.update({cause: int(event.get(cause) or 0) for cause in ("api", "retried")})
+                causes = [cause for cause in ("stale", "api", "retried") if lost[cause]]
+                if causes and counted:
                     hit("thinking-drops", log, event.get("seq"), "+".join(causes))
                     for cause in causes:
-                        counts[f"thinking blocks dropped {cause}"] += int(event[cause])
+                        counts[f"thinking blocks dropped {cause}"] += lost[cause]
+                if stale and counted:
+                    counts["thinking blocks re-dropped stale"] += stale - lost["stale"]
             if kind == "compaction/start" and counted:
                 price, signal = event.get("before_tokens"), event.get("signal")
                 if isinstance(price, (int, float)) and isinstance(signal, (int, float)) and signal > 0:
@@ -873,6 +947,22 @@ def review(
                     counts["tokens trimmed"] += int(event.get("saved_tokens") or 0)
                 else:
                     hit("cold-prunes", log, event.get("seq"))
+            # The harness's price of its view at a cut, against the request it last sent (the provider's
+            # count plus what the provider said it cleared first). The cut's price adds one
+            # step's results, so only a wide gap counts: session 90e83048-f57 cut at 2.0x on 2026-10-30.
+            if kind in ("compaction/prune", "compaction/start") and counted and last_sent:
+                price = event.get("before_tokens")
+                if isinstance(price, (int, float)) and price > 0:
+                    counts["priced cuts"] += 1
+                    if price > DRIFT * last_sent:
+                        hit("estimate-drift", log, event.get("seq"), f"{price / last_sent:.2f}x")
+            if kind in ("compaction/start", "compaction/end", "compaction/prune"):
+                last_sent = 0  # the next request is priced against the cut view
+            if kind == "assistant/message" and isinstance(event.get("usage"), dict):
+                cleared = event.get("context_cleared") if isinstance(event.get("context_cleared"), dict) else {}
+                last_sent = _prompt_tokens(event) + int(cleared.get("input_tokens") or 0)
+            if kind == "notice" and event.get("kind") == "usage_partial" and counted:
+                hit("usage-distrust", log, event.get("seq"), str(event.get("model") or ""))
             if kind in ("compaction/prune", "compaction/end") and counted and event.get("arguments_folded"):
                 hit("argument-folds", log, event.get("seq"), str(event.get("arguments_folded")))
             # A prune rewrites tool results the cached prefix already holds (the working
@@ -925,14 +1015,29 @@ def review(
                     counts["gateway-wire uncached tokens"] += max(prompt - read, 0)
                 if counted and previous_read > 20_000 and read < previous_read / 2:
                     cause = why or ("model" if switched else "idle" if idle else "unexplained")
+                    # The provider's own reading of the request, where it gave one: a
+                    # drop the harness logged no cause for is either a prefix it changed without
+                    # saying so, or an entry the provider dropped although the request matched.
+                    told = str((event.get("cache_miss") or {}).get("type") or "")
+                    if cause == "unexplained" and told in API_CHANGED:
+                        cause = f"api {told}"
+                        hit("unmarked-prefix-changes", log, event.get("seq"), told)
+                    elif cause == "unexplained" and told == "unchanged":
+                        cause = "provider dropped"
                     hit("cache-drops", log, event.get("seq"), cause)
                     counts[f"cache-drops {cause}"] += 1
+                    if cause == "unexplained" and str(model or "").startswith("opencode-go:"):
+                        counts["opencode-go unexplained cache-drops"] += 1
+                if counted and str(model or "").startswith("opencode-go:"):
+                    # The gateway's own share (prediction `opencode-affinity-headers`).
+                    counts["opencode-go steps"] += 1
                 previous_read = read or int(usage.get("input") or 0)
                 previous_at = event.get("t") or 0
                 previous_model = model or previous_model
                 why = ""
         _locators(log, since, until, counts, hit, cited, with_facts)
         _folds(log, events, inside, counts, hit)
+        _parts_cached(log, events, inside, counts, hit)
         _sources(log, since, until, counts, hit)
         _visuals(log, events, inside, counts, hit)
         _split_search(log, events, inside, counts, hit)
@@ -1106,6 +1211,9 @@ def _designs(log: Path, events: list[dict[str, Any]], inside, counts: Counter, h
         last, seq = checks[-1]
         if int(last.get("design_issues") or 0):
             hit("design-unfixed", log, seq)
+        # Controls that still did nothing on a page not declared a static mockup.
+        if int(last.get("design_dead_clicks") or 0) and not last.get("design_static"):
+            counts["design pages left with dead clicks"] += 1
     # The app held to its locked design: the last compare of a page in a turn, and the
     # writes that moved a reviewed design's tokens.
     compares: dict[tuple[Any, str], tuple[dict[str, Any], Any]] = {}
@@ -1305,6 +1413,36 @@ def _folds(log: Path, events: list[dict[str, Any]], inside, counts: Counter, hit
         counts["tokens spent on folds"] += spent
         if spared < spent:
             hit("fold-unpaid", log, row.get("seq"), f"{len(later)} steps after it, {spared - spent:+,} tokens")
+
+
+def _parts_cached(log: Path, events: list[dict[str, Any]], inside, counts: Counter, hit) -> None:
+    """Whether a cut that kept the block's earlier parts had them read from cache.
+
+    The floor is per model: what the request after the log's first cut on that model read,
+    when the block was new and only the system prompt and the tools could come from cache.
+    A cut is judged when it has earlier parts, merged none, and both the request before it
+    (a warm cache) and the one after it ran on the same model as the floor."""
+    floor: dict[str, int] = {}
+    prior_parts = 0
+    for at, row in enumerate(events):
+        if row.get("type") != "compaction/summary":
+            continue
+        before = next((e for e in reversed(events[:at]) if e.get("type") == "assistant/message"), None)
+        after = next((e for e in events[at + 1:] if e.get("type") == "assistant/message"), None)
+        earlier, prior_parts = prior_parts, int(row.get("parts_tokens") or 0)
+        if before is None or after is None or before.get("model") != after.get("model"):
+            continue
+        model = str(after.get("model") or "")
+        read = int((after.get("usage") or {}).get("cache_read") or 0)
+        if model not in floor:
+            floor[model] = read
+            continue
+        warm = int((before.get("usage") or {}).get("cache_read") or 0) > 0
+        if not earlier or int(row.get("merged") or 0) or not warm or not inside(row):
+            continue
+        counts["cuts keeping parts"] += 1
+        if read < floor[model] + earlier // 2:
+            hit("parts-repriced", log, row.get("seq"), f"read {read:,}, floor {floor[model]:,}, earlier parts ~{earlier:,}")
 
 
 def _locators(

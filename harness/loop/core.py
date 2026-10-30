@@ -474,9 +474,9 @@ class CoreMixin:
         # same request (`context_price._record_context_measure`), taken from the last request. None
         # until a provider has priced one.
         self._estimate_bias: Optional[float] = None
-        # The estimate of the last request the provider priced, for the check that its counts are
-        # whole.
-        self._measured_view_tokens: Optional[int] = None
+        # (request as sent, its estimate) at the route's last count that followed the request's
+        # growth: the evidence the under-report check weighs. None after a cut.
+        self._usage_anchor: Optional[tuple[int, int]] = None
         # Whether replaying the conversation for the summarizer earns its cache read. It starts
         # optimistic, then the provider's own usage numbers decide it and it holds for the session,
         # since a prefix that missed once will miss again for the same reasons.

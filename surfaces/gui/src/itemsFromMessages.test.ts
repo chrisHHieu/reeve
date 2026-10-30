@@ -115,7 +115,7 @@ describe("itemsFromMessages notices", () => {
     ).toEqual([
       { kind: "user", text: "hi" },
       { kind: "assistant", text: "partial ans" },
-      { kind: "notice", tone: "warn", text: "Interrupted." },
+      { kind: "notice", tone: "warn", text: "Stopped." },
       { kind: "user", text: "again" },
       { kind: "notice", tone: "warn", text: "Error: model down", retriable: true },
     ]);

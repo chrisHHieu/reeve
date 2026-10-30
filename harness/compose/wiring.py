@@ -64,6 +64,8 @@ def attach_session_state(engine: TurnEngine, p: FeatureContext) -> None:
     compaction_config = p.config.compaction or {}
     # The context-awareness line (`[compaction] context_budget_line`, on by default).
     engine.context_budget_line = bool(compaction_config.get("context_budget_line", True))  # type: ignore[attr-defined]
+    # The context ledger (`[compaction] context_ledger`, off until its ablation says it pays).
+    engine.context_ledger = bool(compaction_config.get("context_ledger", False))  # type: ignore[attr-defined]
     # The model may fold its own context (`[compaction] model_fold`, on by default). Only a
     # session's own engine is offered it: a subagent (seeded from `base_registry`) runs one bounded
     # task in a context of its own.

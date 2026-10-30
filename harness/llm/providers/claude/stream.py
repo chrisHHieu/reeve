@@ -6,7 +6,7 @@ from typing import Any, Iterable, Iterator, Optional
 
 from ..arguments import parse_arguments
 from ..base import AssistantTurn, StreamChunk, TokenUsage, ToolCall
-from . import context_editing
+from . import context_editing, diagnostics
 from .binding import dropped_by_api
 from .refusal import finish_reason, raise_if_refused
 from .turns import reasoning_text, replay_extras, thinking_block, usage_from
@@ -27,6 +27,11 @@ class _Reply:
         # What the API dropped from the request (`input_transformations`): on `message_start`, and
         # again on the closing `message_delta` after a mid-stream fallback, which then wins.
         self.dropped: dict[str, int] = {}
+        # The response's id and its cache diagnostics, both on `message_start`.
+        self.message_id: Optional[str] = None
+        self.cache_miss: Optional[dict[str, Any]] = None
+        # What server-side context editing cleared from the request.
+        self.cleared: Optional[dict[str, int]] = None
 
     def turn(self) -> AssistantTurn:
         raise_if_refused(self.stop_reason, self.last_delta)
@@ -43,6 +48,9 @@ class _Reply:
             extras=replay_extras(blocks),
             usage=self.usage,
             thinking_dropped=self.dropped or None,
+            response_id=self.message_id,
+            cache_miss=self.cache_miss,
+            context_cleared=self.cleared,
         )
 
 
@@ -51,8 +59,9 @@ def _message_start(reply: _Reply, event: Any) -> None:
     message = getattr(event, "message", None)
     reply.usage = usage_from(getattr(message, "usage", None)) or reply.usage
     reply.dropped = dropped_by_api(message) or reply.dropped
-    context_editing.log_applied(event)
-    context_editing.log_applied(message)
+    reply.message_id = getattr(message, "id", None) or reply.message_id
+    reply.cache_miss = diagnostics.read(message) or reply.cache_miss
+    reply.cleared = context_editing.cleared(message) or context_editing.cleared(event) or reply.cleared
 
 
 def _block_start(reply: _Reply, event: Any) -> None:
@@ -99,7 +108,8 @@ def _block_delta(reply: _Reply, event: Any) -> Optional[StreamChunk]:
 def _message_delta(reply: _Reply, event: Any) -> None:
     reply.last_delta = getattr(event, "delta", None)
     reply.dropped = dropped_by_api(event) or reply.dropped
-    context_editing.log_applied(event)
+    # On the closing event too, like the drops: a mid-stream fallback's request is the one priced.
+    reply.cleared = context_editing.cleared(event) or reply.cleared
     reason = getattr(reply.last_delta, "stop_reason", None)
     if reason:
         reply.stop_reason = reason

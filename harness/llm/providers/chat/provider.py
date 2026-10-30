@@ -16,6 +16,7 @@ from ..base import AssistantTurn, ModelCapabilities, ProviderClient
 from ..capabilities import capabilities_for
 from ..reasoning import reasoning_echo_field
 from ..timeouts import stream_timeout
+from ..turns import CACHE_AFFINITY, session_headers
 from .credentials import resolve_api_key
 from .reply import read_stream, turn_from_response
 from .request import build_request, send
@@ -58,7 +59,8 @@ class OpenAIProvider(ProviderClient):
     def _request_headers(self, affinity: Any) -> Optional[dict[str, str]]:
         if not self._session_header:
             return None
-        return {**self._default_headers, self._session_header: str(affinity) if affinity else self._session_id}
+        settings = {CACHE_AFFINITY: affinity} if affinity else {}
+        return {**self._default_headers, **session_headers(self._session_header, settings, self._session_id)}
 
     def _ensure_client(self) -> Any:
         if self._client is not None:

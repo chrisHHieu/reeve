@@ -32,6 +32,7 @@ from harness.loop import TurnEngine
 from harness.safety.permissions import PermissionEngine
 from harness.llm.providers import AssistantTurn, ModelCapabilities, ProviderClient
 from harness.tools import ToolRegistry
+from harness.context.compaction import part as _part, render_parts as _render_parts
 
 HEAD = "SENTINEL-HEAD: the user's first instruction was to audit the repo"
 MIDDLE = "SENTINEL-MIDDLE: the answer is in ledger.py:212, and the fix is a null check"
@@ -294,7 +295,7 @@ def test_a_reply_missing_sections_gets_one_corrective_re_ask(tmp_path):
     asyncio.run(engine._compact_now())
 
     assert engine.compaction_state is not None
-    assert engine.compaction_state.summary_text == valid_summary("complete now")
+    assert engine.compaction_state.summary_text == _render_parts([_part(valid_summary("complete now"))])
     calls = provider.summarizer_inputs
     assert len(calls) == 2
     correction = calls[1][-1]["content"]

@@ -18,6 +18,7 @@ from typing import Any, Iterable, Optional
 
 from .edit_matchers import find_matches
 from .observed import READ_TOOLS, ObservedFiles
+from .observed_show import file_as_it_stands
 
 
 # -- pipeline listeners --------------------------------------------------------------
@@ -47,20 +48,50 @@ def observation_gate(observed: ObservedFiles, locate: Any) -> Any:
         paths, located = locate(execution.name, arguments)
         if located:
             blocked: list[tuple[str, str, str]] = []
+            views: list[str] = []
+            shown: list[tuple[str, str]] = []
+            budget = SHOWN_CHARS
             for raw in paths:
                 if _matched_edit(execution.name, str(raw), arguments):
                     continue
                 region = _edit_region(execution.name, raw, arguments, observed.resolve)
                 rule, reason = observed.blame(str(raw), region=region)
-                if reason:
-                    blocked.append((str(raw), rule, reason))
+                if not reason:
+                    continue
+                # A call that replaces the file is refused with the file in it.
+                view = _as_it_stands(observed, str(raw), budget) if region is None else None
+                if view is not None:
+                    text, digest, count = view
+                    budget -= len(text)
+                    reason = observed.blame(str(raw), shown=True)[1] or reason
+                    views.append(f"{raw} as it stands now ({count} lines):\n{text}")
+                    shown.append((str(raw), digest))
+                blocked.append((str(raw), rule, reason))
             if blocked:
                 from .pipeline import Block
 
-                return Block(_one_reason(blocked), rule=blocked[0][1])
+                message = "\n\n".join([_one_reason(blocked), *views])
+                return Block(message, rule=blocked[0][1], shown=tuple(shown))
         return None
 
     return check
+
+
+#: What one refusal may show of the files it refuses, together: the reader's own budget for one
+#: read (`files/window.py::MAX_TOTAL_CHARS`), so a refusal is never bigger than the read it saves.
+SHOWN_CHARS = 40_000
+
+
+def _as_it_stands(observed: ObservedFiles, raw: str, budget: int) -> Optional[tuple[str, str, int]]:
+    """The file as `file_as_it_stands` shows it, on this machine only: a remote world's file is
+    read through its own backend, and the refusal there keeps its sentence."""
+    if observed.access is not None or budget <= 0:
+        return None
+    try:
+        key = observed.resolve(raw)
+    except Exception:  # noqa: BLE001 — a path the store cannot key is not shown
+        return None
+    return file_as_it_stands(Path(key), budget)
 
 
 def _matched_edit(name: str, raw: str, arguments: dict[str, Any]) -> bool:

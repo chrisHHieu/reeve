@@ -368,3 +368,18 @@ describe("a batch of calls written in one message", () => {
     expect(tools(live).map((t) => [t.callId, t.queued])).toEqual([["p1", undefined]]);
   });
 });
+
+describe("a compaction the engine started", () => {
+  it("keeps why it runs while it lasts, and forgets it when the summarizer is done", () => {
+    const live = new LiveSession("s");
+    const host = hostStub();
+    feed(live, host, [["turn_start", { input: "go" }], ["compacting", { why: "stage", tokens: 161_000 }]]);
+    expect(live.current.compacting).toBe(true);
+    expect(live.current.compactingWhy).toBe("stage");
+    feed(live, host, [["compacted", { text: "summarized", reason: "summarized" }]]);
+    expect(live.current.compacting).toBe(false);
+    expect(live.current.compactingWhy).toBeNull();
+    feed(live, host, [["compacting", {}]]);
+    expect(live.current.compactingWhy).toBeNull();
+  });
+});

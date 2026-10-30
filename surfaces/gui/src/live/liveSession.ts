@@ -53,6 +53,8 @@ export interface LiveState {
   /** A person asked for it between turns (`/compact`). That one ends on `compacted` or
    *  `compact_failed`, not on the next frame: a job's roster can arrive meanwhile. */
   compactingManual: boolean;
+  /** Why the engine compacts: `full`, `stage` or `overflow`; null when it did not say. */
+  compactingWhy: string | null;
   /** How the last `/compact` between turns ended when it left no marker. It leaves with the
    *  person's next message. */
   compactNote: CompactNote | null;
@@ -166,6 +168,7 @@ function initialState(): LiveState {
     compacting: false,
     compactingSince: null,
     compactingManual: false,
+    compactingWhy: null,
     compactNote: null,
     revert: null,
     connected: false,
@@ -302,8 +305,9 @@ export class LiveSession {
     this.goalVersion += 1;
     this.patch({ goal: resolve(next, this.state.goal) });
   };
-  setCompacting = (compacting: boolean, manual = false): void =>
+  setCompacting = (compacting: boolean, manual = false, why: string | null = null): void =>
     this.patch({
+      compactingWhy: compacting ? (why ?? (this.state.compacting ? this.state.compactingWhy : null)) : null,
       compacting,
       compactingSince: compacting ? (this.state.compacting ? this.state.compactingSince : Date.now()) : null,
       compactingManual: compacting && (manual || (this.state.compacting && this.state.compactingManual)),

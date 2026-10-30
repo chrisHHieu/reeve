@@ -109,6 +109,18 @@ def _digest(target: Path) -> Optional[str]:
         return None
 
 
+def _next_step(shown: bool, region: Optional[tuple[int, int]], why: str) -> str:
+    """What a refusal tells the model to do. It used to be "read it again", and a
+    model that read a window again was refused again (session 90e83048-f57: 30 lines of 181
+    before a whole-file write), so a write that replaces the file asks for all of it."""
+    if shown:
+        return (" It is shown below as it stands now, whole: write your change against "
+                "that text, not against the version you remember.")
+    if region is not None:
+        return f" Read that part first: {why}"
+    return f" Read the whole file first, with no line limit, since this call replaces all of it: {why}"
+
+
 @dataclass
 class ObservedFiles:
     """Per-session memory of which files the agent has seen, and as what.
@@ -185,6 +197,7 @@ class ObservedFiles:
         *,
         covered: Optional[tuple[int, int]] = None,
         total: Optional[int] = None,
+        digest: Optional[str] = None,
     ) -> None:
         """Note that the agent has just seen this file as it currently stands.
 
@@ -195,12 +208,15 @@ class ObservedFiles:
         `covered`/`total` are the reader's own report of its window (`start_line`/
         `end_line`/`total_lines`). A write passes neither, which marks the coverage full —
         the agent produced the whole content.
+
+        `digest` is the version seen, when the caller holds it: a refusal that showed the
+        file records what it showed, so a change since then still reads as one.
         """
         try:
             key = self.resolve(raw)
         except Exception:  # noqa: BLE001 — an unresolvable path is simply not recorded
             return
-        digest = self._digest(key)
+        digest = self._digest(key) if digest is None else digest
         with self._lock:
             self._cut.discard(key)  # seen again: its text is in the context once more
             if self._frame is not None:
@@ -287,12 +303,15 @@ class ObservedFiles:
 
     # -- the rule -----------------------------------------------------------------
 
-    def blame(self, raw: str, *, region: Optional[tuple[int, int]] = None) -> tuple[str, str]:
+    def blame(
+        self, raw: str, *, region: Optional[tuple[int, int]] = None, shown: bool = False
+    ) -> tuple[str, str]:
         """(rule, reason) for refusing this edit, or ("", "") when it may proceed.
 
         The rule is what the pipeline's `Block` carries; the reason is what the model
         reads. Kept as one method rather than two so the answer to "why" and the answer
-        to "which policy" can never disagree.
+        to "which policy" can never disagree. `shown` is whether the refusal carries the
+        file as it stands, which changes what the model is told to do next.
 
         `region` is the line span this edit actually touches, when the caller could locate
         it (a `replace_in_file` whose `old` text was found). A covered region is enough:
@@ -318,15 +337,16 @@ class ObservedFiles:
             return (
                 RULE_OUT_OF_VIEW,
                 f"what you read of {raw} is no longer in your context: the turns that held "
-                "it were folded or compacted. Read it again before overwriting it: a whole "
-                "file written from memory replaces whatever you do not remember.",
+                "it were folded or compacted."
+                + _next_step(shown, region, "a whole file written from memory replaces "
+                             "whatever you do not remember."),
             )
         if seen is None:
             return (
                 RULE_NEVER_READ,
-                f"{raw} already exists and you have not read it in this session. "
-                "Read it first, then edit: writing from a guess overwrites content you "
-                "have not seen.",
+                f"{raw} already exists and you have not read it in this session."
+                + _next_step(shown, region, "writing from a guess overwrites content you "
+                             "have not seen."),
             )
         if seen is UNVERIFIED or seen == UNVERIFIED:
             return ("", "")
@@ -350,17 +370,17 @@ class ObservedFiles:
                 )
                 return (
                     RULE_PARTIAL_VIEW,
-                    f"you have not read the part of {raw} this edit touches ({where}). "
-                    "Read that part first (or the whole file): an edit written against "
-                    "text you have not seen would discard whatever is there.",
+                    f"you have not read the part of {raw} this edit touches ({where})."
+                    + _next_step(shown, region, "an edit written against text you have "
+                                 "not seen would discard whatever is there."),
                 )
             return ("", "")
         return (
             RULE_STALE,
             f"{raw} has changed on disk since you read it — something else wrote to it "
-            "(a command you ran, a build, or the user). Read it again before editing: the "
-            "version in your context is no longer the one on disk, and an edit written "
-            "against it would discard whatever changed.",
+            "(a command you ran, a build, or the user)."
+            + _next_step(shown, region, "the version in your context is no longer the one "
+                         "on disk, and an edit written against it would discard whatever changed."),
         )
 
     def verdict(self, raw: str) -> Optional[str]:

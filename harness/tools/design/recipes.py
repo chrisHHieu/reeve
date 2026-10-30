@@ -178,8 +178,8 @@ textarea { min-height: 120px; padding-block: var(--space-3); }
 </head>
 <body>
 <header class="wrap row" style="justify-content: space-between; padding-block: var(--space-4)">
-  <a href="#" style="font-weight: 700; text-decoration: none">Wordmark</a>
-  <nav class="row" aria-label="Main"><a href="#">Product</a><a href="#">Pricing</a><a class="btn primary" href="#">Start</a></nav>
+  <a href="index.html" style="font-weight: 700; text-decoration: none">Wordmark</a>
+  <nav class="row" aria-label="Main"><a href="product.html">Product</a><a href="pricing.html">Pricing</a><a class="btn primary" href="signup.html">Start</a></nav>
 </header>
 <main class="wrap">
   <!-- The design goes here. -->

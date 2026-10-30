@@ -97,8 +97,8 @@ def block_key(block: dict[str, Any]) -> str:
     return hashlib.sha256(str(secret or "").encode("utf-8")).hexdigest()[:32]
 
 
-def keep_bound(kwargs: dict[str, Any], refused: frozenset[str] = frozenset()) -> int:
-    """Drop, in place, the thinking blocks the API would refuse; the number dropped.
+def keep_bound(kwargs: dict[str, Any], refused: frozenset[str] = frozenset()) -> list[str]:
+    """Drop, in place, the thinking blocks the API would refuse; the keys of those dropped.
 
     A block is kept when its recorded prefix is the request's prefix before its message, or when it
     has none recorded (older history). `refused` names blocks a 400 already turned down.
@@ -109,7 +109,7 @@ def keep_bound(kwargs: dict[str, Any], refused: frozenset[str] = frozenset()) ->
     a drop was written without the dropped one, since this runs on every request."""
     messages = kwargs.get("messages") or []
     before = prefixes(kwargs)
-    dropped = 0
+    dropped: list[str] = []
     for index, message in enumerate(messages):
         content = message.get("content")
         if not isinstance(content, list) or not any(
@@ -122,8 +122,9 @@ def keep_bound(kwargs: dict[str, Any], refused: frozenset[str] = frozenset()) ->
                 out.append(block)
                 continue
             recorded = block.get(PREFIX_KEY)
-            if block_key(block) in refused or (recorded is not None and recorded != before[index]):
-                dropped += 1
+            key = block_key(block)
+            if key in refused or (recorded is not None and recorded != before[index]):
+                dropped.append(key)
                 continue
             out.append({k: v for k, v in block.items() if k != PREFIX_KEY})
         message["content"] = _filled(out)

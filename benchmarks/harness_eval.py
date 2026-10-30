@@ -132,7 +132,7 @@ ABLATABLE = (
 #: `model_fold` was measured this way and is now on by default, so it is ablated
 #: like the rest; so is `prune_write_arguments`. The next mechanism under trial
 #: goes here.
-OPT_IN: tuple[str, ...] = ()
+OPT_IN: tuple[str, ...] = ("context_ledger",)
 #: Every feature of a session, switched off the way a person does it: `[features]
 #: remove` in the eval workspace's `.reeve/config.toml`, so the variant is a configuration the
 #: product really runs. Named one by one (`--only feature:web`); they are not in the default set,
@@ -241,6 +241,8 @@ def product_engine(
         engine.disable_model_fold()  # No `fold_context`, no fold hints
     if "prune_write_arguments" in ablate:
         engine.prune_write_arguments = False
+    if "context_ledger" in enable:
+        engine.context_ledger = True
     if "todo_list" in ablate:
         # No task list at all: the tool, and the prompt's words asking for it. The nudge
         # goes with the tool (it fires only where `todo_write` is offered).
@@ -304,6 +306,8 @@ def fired(state: Path, mechanism: str) -> int:
                 count += int(event.get("arguments_folded") or 0) if str(kind).startswith("compaction/") else 0
             elif mechanism == "todo_list":
                 count += kind == "todo/write"
+            elif mechanism == "context_ledger":
+                count += kind == "context/budget" and event.get("hint") == "ledger"
             elif mechanism == "delegation_prompt":
                 count += kind == "tool/call" and event.get("name") in ("task", "workflow")
             elif mechanism == "repair_recall":

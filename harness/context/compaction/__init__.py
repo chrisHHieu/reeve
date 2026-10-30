@@ -6,7 +6,14 @@ from __future__ import annotations
 
 from .arguments import *  # noqa: F401,F403
 from .asking import ask_text, settle_parts
-from .block import apply_to_outbound, compacted_block, offload_images, replace_offloaded_images
+from .block import (
+    BLOCK_OPENING,
+    apply_to_outbound,
+    block_segments,
+    compacted_block,
+    offload_images,
+    replace_offloaded_images,
+)
 from .boundary import pick_boundary
 from .extraction import cap_user_messages, extract_user_messages, extract_working_state, iter_tool_calls
 from .fold import *  # noqa: F401,F403

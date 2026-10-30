@@ -550,7 +550,7 @@ export function handleSessionEvent(live: LiveSession, ev: WsEvent, host: Session
       if (typeof d.thinking === "string") patchReady(live, host, { thinking: d.thinking });
       break;
     case "compacting":
-      live.setCompacting(true, d.manual === true);
+      live.setCompacting(true, d.manual === true, typeof d.why === "string" ? d.why : null);
       live.setCompactNote(null);
       break;
     case "compact_failed":
@@ -627,7 +627,7 @@ export function handleSessionEvent(live: LiveSession, ev: WsEvent, host: Session
       break;
     case "interrupted":
       flushPartialStream();
-      setItems((p) => [...p, { kind: "notice", tone: "warn", text: "Interrupted." }]);
+      setItems((p) => [...p, { kind: "notice", tone: "warn", text: "Stopped." }]);
       appendChanges(d);
       break;
     case "error": {

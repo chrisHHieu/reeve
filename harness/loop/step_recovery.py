@@ -33,7 +33,7 @@ class StepRecoveryMixin:
         # is progress-guarded: each pass moves the boundary forward or gives up,
         # so a model that keeps overflowing still terminates in the error path.
         if compaction.is_context_overflow(exc) and not self._cancel.is_set():
-            yield Event(EventType.COMPACTING, {})
+            yield Event(EventType.COMPACTING, {"why": "overflow"})
             notice = await self._compact_now(force=True)
             if notice:
                 self._append_notice("compacted", notice.text, **notice.numbers)

@@ -14,6 +14,7 @@ from typing import Any, Optional
 from .sanitize import sanitize_messages, sanitize_text
 from .turns import (
     CACHE_AFFINITY,
+    CACHE_SEGMENTS,
     AssistantTurn,
     ModelCapabilities,
     StreamChunk,
@@ -24,6 +25,7 @@ from .turns import (
 
 __all__ = [
     "CACHE_AFFINITY",
+    "CACHE_SEGMENTS",
     "AssistantTurn",
     "ModelCapabilities",
     "ProviderClient",

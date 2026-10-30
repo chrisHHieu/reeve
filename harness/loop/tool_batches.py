@@ -104,6 +104,7 @@ class ToolBatchMixin:
         bridged = tool_call.name == TOOL_CALL
         bridge_error = rewrite_bridge_call(self.registry, tool_call)
         if bridge_error is not None:
+            self._log_unstarted(tool_call)
             yield self._record_result(tool_call, {"error": bridge_error}, "error")
             yield False
             return
@@ -147,6 +148,7 @@ class ToolBatchMixin:
             # The code-only rule, enforced. A tool result and not an exception keeps the
             # call/result pairing the provider requires, and tells the model how to reach the tool
             # it wanted.
+            self._log_unstarted(tool_call)
             yield self._record_result(tool_call, {"error": refusal}, "error")
             yield False
             return
@@ -162,6 +164,7 @@ class ToolBatchMixin:
         # deal with their own arguments.
         problem = self.registry.argument_problem(tool_call.name, tool_call.arguments)
         if problem is not None:
+            self._log_unstarted(tool_call)
             yield self._record_result(tool_call, {"error": problem}, "error")
             yield False
             return
@@ -169,6 +172,7 @@ class ToolBatchMixin:
         # before the hooks, the policy and the approval card.
         refused = self._refused_early(tool_call)
         if refused is not None:
+            self._log_unstarted(tool_call)
             yield self._record_result(tool_call, refused.value, refused.status)
             yield False
             return
@@ -242,6 +246,17 @@ class ToolBatchMixin:
 
     # -- calls that do not run ---------------------------------------------------------------
 
+    def _log_unstarted(self, tool_call: ToolCall) -> None:
+        """`tool/call` for a call answered before it ran: refused, denied or stopped.
+
+        `tool/call` was written only when a call started, so a refused call's arguments were in
+        every later request (the assistant message keeps them) and in no log row.
+        Found measuring the refused overwrite: the 44 read-guard refusals since 2026-09-25 named their file only in
+        the refusal's sentence. A call whose arguments never parsed is the exception, since its raw
+        text is not kept in the history (`_mangled_tool`)."""
+        if not (isinstance(tool_call.arguments, dict) and "_raw" in tool_call.arguments):
+            self._log_call(tool_call)
+
     def _mangled_tool(self, tool_call: ToolCall) -> Event:
         """Answer a tool call whose arguments never parsed, with the real diagnosis.
 
@@ -265,6 +280,7 @@ class ToolBatchMixin:
         would be blind to the loop a person is most likely to sit and watch: a model proposing over
         and over the exact thing the permission engine keeps refusing. A Stop from the person is not
         routed here, because interrupting is not the agent failing to make progress."""
+        self._log_unstarted(tool_call)
         message = tool_error_message(tool_call, reason)
         reminder = self.repeats.observe(tool_call.name, tool_call.arguments, reason, status=BLOCKED)
         if reminder:
@@ -301,6 +317,7 @@ class ToolBatchMixin:
         """The answer for a call that will not run because the person stopped the turn: a
         tool-error result in the history (hosted chat templates reject orphaned tool_calls, and a
         durable resume would prompt for it again) and the finished event for the tool card."""
+        self._log_unstarted(tool_call)
         self.messages.append(tool_error_message(tool_call, "interrupted by user"))
         self._log_tool_result(tool_call, "interrupted by user", "interrupted")
         self._audit(tool_call, stage="finished", status="interrupted", reason="user stop")

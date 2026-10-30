@@ -77,12 +77,12 @@ test("Escape stops the run, and leaves the composer's own Escape alone", async (
   // a draft). The run must still be going.
   await box(page).press("Escape");
   await expect(page.getByRole("button", { name: /Stop/ })).toBeVisible();
-  await expect(page.getByText("Interrupted.")).toHaveCount(0);
+  await expect(page.getByText("Stopped.", { exact: true })).toHaveCount(0);
 
   // Focus the page instead: now it is the global cancel.
   await box(page).blur();
   await page.keyboard.press("Escape");
-  await expect(page.getByText("Interrupted.")).toBeVisible();
+  await expect(page.getByText("Stopped.", { exact: true })).toBeVisible();
   await expect(page.getByRole("button", { name: /Stop/ })).toHaveCount(0);
 });
 

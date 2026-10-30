@@ -153,7 +153,7 @@ def test_a_compacted_head_leaves_the_tails_old_thoughts_out_and_keeps_the_turn_g
     turn = _ask(provider, compacted)
 
     assert _signatures(api.requests[-1]) == []
-    assert turn.thinking_dropped == {"stale": 2}
+    assert turn.thinking_dropped == {"stale": 2, "stale_new": 2}
     # The answers themselves are still there; only the reasoning behind them is left out.
     texts = [b.get("text") for m in api.requests[-1]["messages"] for b in m["content"] if b.get("type") == "text"]
     assert "answer 1" in texts and "answer 2" in texts
@@ -170,7 +170,9 @@ def test_a_thought_written_after_the_change_is_carried_from_then_on():
     turn = _ask(provider, history)
 
     assert _signatures(api.requests[-1]) == ["sig-2"]
-    assert turn.thinking_dropped == {"stale": 1}
+    # sig-1 is left out of this request too, but the request before already went without it: the
+    # store counted every such re-send as a step that lost thinking, 314 for one session's 3-13 blocks.
+    assert turn.thinking_dropped == {"stale": 1, "stale_new": 0}
 
 
 def test_a_different_tool_list_is_a_different_conversation_but_the_same_tools_reordered_is_not():
@@ -184,7 +186,7 @@ def test_a_different_tool_list_is_a_different_conversation_but_the_same_tools_re
     history.append({"role": "user", "content": "plan mode: write tools hidden"})
     turn = _ask(provider, history, tools=TOOLS[:1])
     assert _signatures(api.requests[-1]) == []
-    assert turn.thinking_dropped == {"stale": 2}
+    assert turn.thinking_dropped == {"stale": 2, "stale_new": 2}
 
 
 def test_the_request_asks_the_api_to_drop_what_it_still_finds_and_the_log_hears_of_it():
@@ -231,7 +233,7 @@ def test_a_refused_thought_is_answered_once_without_thinking_and_never_sent_agai
     # sig-1 is not tried again. The gateway rewrites every request anew, so sig-2 is refused too,
     # and that request goes once more without it.
     assert _signatures(api.requests[before]) == ["sig-2"]
-    assert turn.text == "answer 3" and turn.thinking_dropped == {"stale": 1, "retried": 1}
+    assert turn.text == "answer 3" and turn.thinking_dropped == {"stale": 1, "stale_new": 1, "retried": 1}
 
 
 def test_a_second_refusal_after_the_retry_is_the_turns_error():
@@ -263,7 +265,7 @@ def test_a_thought_only_answer_keeps_a_message_when_its_thought_goes():
     history.append({"role": "user", "content": "next"})
     turn = _ask(provider, history)
 
-    assert turn.thinking_dropped == {"stale": 1}
+    assert turn.thinking_dropped == {"stale": 1, "stale_new": 1}
     assert api.requests[-1]["messages"][1] == {"role": "assistant", "content": [{"type": "text", "text": "(no answer text)"}]}
 
 

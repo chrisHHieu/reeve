@@ -5,6 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..base import AssistantTurn, TokenUsage, ToolCall
+from . import diagnostics
 from .binding import dropped_by_api
 from .refusal import finish_reason, raise_if_refused
 
@@ -79,4 +80,6 @@ def turn_from_response(response: Any) -> AssistantTurn:
         extras=replay_extras(thinking),
         usage=usage_from(getattr(response, "usage", None)),
         thinking_dropped=dropped_by_api(response) or None,
+        response_id=getattr(response, "id", None),
+        cache_miss=diagnostics.read(response),
     )

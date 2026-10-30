@@ -511,12 +511,12 @@ def test_a_400_that_is_not_about_context_editing_still_raises():
     assert provider._context_editing_disabled is False
 
 
-def test_applied_edits_are_logged(caplog):
+def test_what_the_server_cleared_reaches_the_turn():
+    """The engine prices the request as sent from it, and the session log keeps it."""
     reply = _reply(_block("text", text="ok"))
     reply.context_management = SimpleNamespace(applied_edits=[SimpleNamespace(cleared_tool_uses=4, cleared_input_tokens=52_000)])
-    with caplog.at_level(logging.INFO, logger="harness.llm.providers.anthropic"):
-        _complete(reply, context_editing={})
-    assert "cleared 4 tool uses" in caplog.text and "52000" in caplog.text
+    turn, _ = _complete(reply, context_editing={})
+    assert turn.context_cleared == {"input_tokens": 52_000, "tool_uses": 4}
 
 
 def test_normalize_context_editing_degrades_typos():

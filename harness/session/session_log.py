@@ -29,10 +29,10 @@ level above `sessionId`; see `SessionLog.trace`):
     step/start      {turn, step}                step/end    {turn, step}
     user/message    {content, source?}
     assistant/message {turn, step, text, usage?, reasoning?, timing,
-                     partial?, checkpoint?}
+                     partial?, checkpoint?, cache_miss?, context_cleared?}
     tool/call       {turn, step, call_id, name, arguments, parallel?, renamed?}
-                                     — `renamed`: the names a call sent under another
-                                       harness's parameter names, as sent
+                                     — as it starts, or as it is answered unrun;
+                                       `renamed`: names sent under another harness's (0202)
     tool/edited     {turn, step, call_id, name, original, arguments}
                                      — the person edited the call before running it
                                        (approval outcome "modify"): `original` is what the
@@ -59,14 +59,14 @@ level above `sessionId`; see `SessionLog.trace`):
                                        `steering/message` with source "hook:<event>", and
                                        its deny is answered like any other refusal.
     request/header  {reason, system, tools[], model}
-    thinking/dropped {turn, step, model, stale?, api?, other_model?, retried?}
-                                     — the step's request went without some of the model's
-                                       own thinking blocks: `stale` ones the
-                                       harness left out because the conversation before them
-                                       changed (a compaction, a prune, a new tool list), `api`
-                                       and `other_model` ones the API dropped (a changed prefix
-                                       it saw, another model's block), `retried` ones a 400
-                                       refused before the request went again without thinking
+    thinking/dropped {turn, step, model, stale?, stale_new?, api?, other_model?, retried?}
+                                     — the step's request went without some of the model's own
+                                       thinking blocks: `stale` ones the harness left
+                                       out as the conversation before them changed (a compaction,
+                                       a prune, a new tool list), `stale_new` those no earlier
+                                       request went without, `api` and `other_model` ones the API
+                                       dropped (a changed prefix it saw, another model's block),
+                                       `retried` ones a 400 refused before it went without thinking
     todo/write      {turn, step, call_id, todos[]}
     design/check    {turn, step, call_id, name, path, facts} — a design page the call wrote was opened and measured; what the model read of it is in that call's `tool/result` content, the counts the harness review reads are in `facts`
     design/drift    {turn, step, call_id, name, pages, tokens} — the call's write moved theme tokens a design the person reviewed in the app uses; the sentence the model read is in that call's `tool/result` content

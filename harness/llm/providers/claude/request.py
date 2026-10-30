@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any, Optional
 
 from ..base import sanitize_messages
-from .convert import convert_messages, convert_tools
+from .convert import CACHE_POINT, convert_messages, convert_tools
 from .thinking import DEFAULT_MAX_TOKENS, apply_thinking
 
 #: The settings the Messages API takes. Anything else the loop carries (a frequency penalty,
@@ -25,10 +25,14 @@ def cache_marker(cache_ttl: Optional[str]) -> dict[str, Any]:
 
 
 def add_cache_breakpoints(kwargs: dict[str, Any], cache_ttl: Optional[str] = None) -> None:
-    """Ask for prompt caching with two breakpoints, the usual shape for an agent loop:
+    """Ask for prompt caching with up to three breakpoints (the API takes four):
 
     - the last system block, which caches the tools and the system prompt together (tools
       render first);
+    - the last part of a compacted block, when the conversation has one. A cut
+      rewrites the conversation from the block on, but the parts before its new one are
+      unchanged, and this is where an earlier request wrote them. Without it the request after
+      a fold re-read only the system prompt and the tools;
     - the last content block of the final message, which caches the whole conversation so
       far. Each request then reads the previous turns from cache and writes only the new
       tail, because history only ever appends.
@@ -37,7 +41,7 @@ def add_cache_breakpoints(kwargs: dict[str, Any], cache_ttl: Optional[str] = Non
     and the marked block is a copy. A prefix under the model's cacheable minimum is quietly
     not cached.
 
-    Both markers use the same tier on purpose. The API needs a 1h entry to come before a 5m
+    Every marker uses the same tier on purpose. The API needs a 1h entry to come before a 5m
     one, so a mixed pair is a 400 waiting for the next reordering.
     """
     marker = cache_marker(cache_ttl)
@@ -45,6 +49,11 @@ def add_cache_breakpoints(kwargs: dict[str, Any], cache_ttl: Optional[str] = Non
     if isinstance(system, str) and system:
         kwargs["system"] = [{"type": "text", "text": system, "cache_control": marker}]
     messages = kwargs.get("messages") or []
+    for message in messages:
+        for index, block in enumerate(message.get("content") or []):
+            if isinstance(block, dict) and block.get(CACHE_POINT):
+                block = {key: value for key, value in block.items() if key != CACHE_POINT}
+                message["content"][index] = {**block, "cache_control": marker}
     if messages:
         content = messages[-1].get("content")
         if isinstance(content, list) and content:

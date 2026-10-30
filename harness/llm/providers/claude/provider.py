@@ -14,8 +14,8 @@ from typing import Any, Optional
 from ..base import AssistantTurn, ModelCapabilities, ProviderClient
 from ..capabilities import capabilities_for
 from ..timeouts import stream_timeout
-from ..turns import session_headers
-from . import binding, context_editing, refusal
+from ..turns import CACHE_AFFINITY, session_headers
+from . import binding, context_editing, diagnostics, refusal
 from .context_editing import normalize_context_editing
 from ..endpoints import normalize_base_url
 from .credentials import resolve_api_key, resolve_base_url
@@ -24,6 +24,15 @@ from .stream import read_stream
 from .turns import turn_from_response
 
 logger = logging.getLogger("harness.llm.providers.anthropic")
+
+#: How many stale thinking blocks a provider remembers having reported (`_reported_stale`).
+_REPORTED = 4096
+
+
+def _conversation(settings: dict[str, Any]) -> Optional[str]:
+    """The session's routing key, which names one conversation for its cache diagnostics."""
+    key = settings.get(CACHE_AFFINITY)
+    return str(key) if key else None
 
 
 class AnthropicProvider(ProviderClient):
@@ -77,11 +86,23 @@ class AnthropicProvider(ProviderClient):
         # Thinking blocks a 400 refused once. They are left out of every later request, where they
         # would be refused again and cost a second round trip each time.
         self._refused_blocks: set[str] = set()
+        # Stale blocks already reported. A block that went stale stays in the history and is left
+        # out of every request after, so the step that first went without it is the loss; the
+        # 2026-10-26 store counted one session's 3-13 blocks once a step, 314 times. Kept by key
+        # (insertion-ordered, the oldest let go past `_REPORTED`); a restart forgets it, and the
+        # first request after one reports its session's stale blocks once more.
+        self._reported_stale: dict[str, None] = {}
         # The betas a route sends on every call through its client's default header (the
         # subscription's OAuth one). The SDK sends `betas` as the request's own header, which
         # replaces the default, so a beta call has to name them again.
         standing = next((v for k, v in self._default_headers.items() if k.lower() == "anthropic-beta"), "")
         self._standing_betas = [beta.strip() for beta in standing.split(",") if beta.strip()]
+        # Cache diagnostics, on the Claude API only: a client someone else built is a
+        # cloud or a gateway (Bedrock and Google's Claude do not take the field), and so is a base
+        # URL that is not Anthropic's. A 400 about it latches it off like the betas above.
+        self._diagnostics = client is None and (not base_url or "api.anthropic.com" in base_url)
+        # The last response id of each conversation, keyed by the session's routing key.
+        self._last_response: dict[str, str] = {}
 
     # -- client ---------------------------------------------------------------------------
 
@@ -133,9 +154,13 @@ class AnthropicProvider(ProviderClient):
             return client.beta.messages.create(**kwargs, betas=sent, **extra)
         return client.messages.create(**kwargs)
 
-    def _features(self, kwargs: dict[str, Any], model: str) -> tuple[dict[str, Any], list[str], dict[str, Any]]:
-        """The call with what this provider adds to it: the refusal fallback, context editing and
-        the thinking-binding controls, each with its beta, minus what a latch has turned off."""
+    def _features(
+        self, kwargs: dict[str, Any], model: str, conversation: Optional[str] = None
+    ) -> tuple[dict[str, Any], list[str], dict[str, Any]]:
+        """The call with what this provider adds to it: the refusal fallback, context editing, the
+        thinking-binding controls (each with its beta) and the cache diagnostics, minus what a latch
+        has turned off. `conversation` is the session's routing key; a call with none (a pass no
+        session owns) asks for no diagnostics, since it has no previous response to compare with."""
         edits: list[dict[str, Any]] = []
         if self.context_editing and not self._context_editing_disabled:
             edits = context_editing.context_editing_edits(self.context_editing)
@@ -156,11 +181,18 @@ class AnthropicProvider(ProviderClient):
             # the API and reported, and the turn goes on.
             betas.append(binding.BETA)
             call["thinking"] = binding.with_drop(call["thinking"])
+        if self._diagnostics and conversation:
+            asked = diagnostics.request(self._last_response.get(conversation))
+            call["extra_body"] = {**(call.get("extra_body") or {}), diagnostics.FIELD: asked}
         return call, betas, extra
 
     def _latch(self, exc: Exception, call: dict[str, Any], model: str) -> bool:
         """Turn off, for the process, the feature a 400 says the model or gateway does not serve;
         whether one was. An optimisation must not cost a turn."""
+        if diagnostics.FIELD in (call.get("extra_body") or {}) and diagnostics.is_rejection(exc):
+            self._diagnostics = False
+            logger.warning("anthropic: %s rejected cache diagnostics (%s) — sending without them", model, exc)
+            return True
         if "block_binding" in (call.get("thinking") or {}) and binding.is_controls_rejection(exc):
             self._binding_disabled = True
             logger.warning("anthropic: %s rejected the thinking-binding controls (%s) — sending without them", model, exc)
@@ -187,7 +219,9 @@ class AnthropicProvider(ProviderClient):
         )
         return True
 
-    def _create(self, client: Any, kwargs: dict[str, Any], *, model: str) -> tuple[Any, dict[str, Any], dict[str, int]]:
+    def _create(
+        self, client: Any, kwargs: dict[str, Any], *, model: str, conversation: Optional[str] = None
+    ) -> tuple[Any, dict[str, Any], dict[str, int]]:
         """One Messages call: the reply, the request as it was sent, and the thinking it went
         without.
 
@@ -198,7 +232,7 @@ class AnthropicProvider(ProviderClient):
         dropped: dict[str, int] = {}
         retried = False
         while True:
-            call, betas, extra = self._features(kwargs, model)
+            call, betas, extra = self._features(kwargs, model, conversation)
             try:
                 return self._post(client, call, betas, extra), call, dropped
             except Exception as exc:  # noqa: BLE001 — anything not answered below is re-raised
@@ -219,21 +253,46 @@ class AnthropicProvider(ProviderClient):
                         continue
                 raise
 
-    def _prepared(self, *, model, messages, tools, settings) -> tuple[dict[str, Any], int]:
-        """The request, with the thinking blocks it can still carry (`binding.keep_bound`), and how
-        many it left out."""
+    def _prepared(self, *, model, messages, tools, settings) -> tuple[dict[str, Any], list[str]]:
+        """The request, with the thinking blocks it can still carry (`binding.keep_bound`), and the
+        keys of those it left out."""
         kwargs = self._request_kwargs(model=model, messages=messages, tools=tools, settings=settings)
         return kwargs, binding.keep_bound(kwargs, frozenset(self._refused_blocks))
 
-    @staticmethod
-    def _finished(turn: AssistantTurn, sent: dict[str, Any], stale: int, dropped: dict[str, int]) -> AssistantTurn:
-        """The turn with the prefix its thinking was written after, kept for the next request, and
-        the thinking this request went without, for the event log."""
+    def _finished(
+        self,
+        turn: AssistantTurn,
+        sent: dict[str, Any],
+        stale: list[str],
+        dropped: dict[str, int],
+        conversation: Optional[str] = None,
+    ) -> AssistantTurn:
+        """The turn with the prefix its thinking was written after, kept for the next request, the
+        thinking this request went without (`stale`, and `stale_new` for the ones no earlier request
+        went without), and what the cache diagnostics said, for the event log. The response's id
+        becomes the conversation's previous one."""
         sidecar = turn.extras.get("_anthropic") if turn.extras else None
         if isinstance(sidecar, dict):
             sidecar["prefix"] = binding.prefixes(sent)[-1]
-        counts = {**(turn.thinking_dropped or {}), **dropped, **({"stale": stale} if stale else {})}
+        counts = {**(turn.thinking_dropped or {}), **dropped}
+        if stale:
+            new = [key for key in stale if key not in self._reported_stale]
+            for key in new:
+                self._reported_stale[key] = None
+            while len(self._reported_stale) > _REPORTED:
+                self._reported_stale.pop(next(iter(self._reported_stale)))
+            counts.update(stale=len(stale), stale_new=len(new))
         turn.thinking_dropped = counts or None
+        asked = (sent.get("extra_body") or {}).get(diagnostics.FIELD)
+        if asked is None:
+            turn.cache_miss = None
+            return turn
+        turn.cache_miss = diagnostics.outcome(turn.cache_miss, compared=bool(asked.get("previous_message_id")))
+        if conversation and turn.response_id:
+            self._last_response.pop(conversation, None)
+            self._last_response[conversation] = turn.response_id
+            while len(self._last_response) > diagnostics.REMEMBERED:
+                self._last_response.pop(next(iter(self._last_response)))
         return turn
 
     def complete(
@@ -245,9 +304,11 @@ class AnthropicProvider(ProviderClient):
         **settings: Any,
     ) -> AssistantTurn:
         kwargs, stale = self._prepared(model=model, messages=messages, tools=tools, settings=settings)
-        response, sent, dropped = self._create(self._ensure_client(), kwargs, model=model)
-        context_editing.log_applied(response)
-        return self._finished(turn_from_response(response), sent, stale, dropped)
+        conversation = _conversation(settings)
+        response, sent, dropped = self._create(self._ensure_client(), kwargs, model=model, conversation=conversation)
+        turn = turn_from_response(response)
+        turn.context_cleared = context_editing.cleared(response)
+        return self._finished(turn, sent, stale, dropped, conversation)
 
     def stream(
         self,
@@ -259,10 +320,11 @@ class AnthropicProvider(ProviderClient):
     ):
         kwargs, stale = self._prepared(model=model, messages=messages, tools=tools, settings=settings)
         kwargs["stream"] = True
-        events, sent, dropped = self._create(self._ensure_client(), kwargs, model=model)
+        conversation = _conversation(settings)
+        events, sent, dropped = self._create(self._ensure_client(), kwargs, model=model, conversation=conversation)
         for chunk in read_stream(events):
             if chunk.turn is not None:
-                self._finished(chunk.turn, sent, stale, dropped)
+                self._finished(chunk.turn, sent, stale, dropped, conversation)
             yield chunk
 
     # -- what the loop asks about the provider ---------------------------------------------

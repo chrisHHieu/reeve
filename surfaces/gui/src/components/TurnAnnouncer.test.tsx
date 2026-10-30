@@ -24,7 +24,7 @@ describe("turnAnnouncement", () => {
     );
     expect(turnAnnouncement([user, answer, receipt], false)).toBe("Done · 2 files changed · check passed");
     expect(turnAnnouncement([user, answer], false)).toBe("Done");
-    expect(turnAnnouncement([user, { kind: "notice", tone: "warn", text: "Interrupted." } as Item], false)).toBe(
+    expect(turnAnnouncement([user, { kind: "notice", tone: "warn", text: "Stopped." } as Item], false)).toBe(
       "Stopped",
     );
   });

@@ -44,6 +44,21 @@ test("approval: Deny skips the tool and the agent says so", async ({ page }) => 
   await expect(page.getByText("Understood — skipped the command.")).toBeVisible();
 });
 
+test("a pasted link with no space to wrap at stays inside its bubble and its column", async ({ page }) => {
+  // A paste of cited URLs (2026-10-29): the link widened the bubble past its column, and the
+  // right-aligned bubble's overflow went left and was cut off.
+  const link = "https://example.org/portale/documents/20143/257829/Allegato+quadro+generale+categorie_QuadroGeneraleCategorie.pdf/caf80eb7-0000-4000-8000-000000009df4";
+  await say(page, `see [1] (${link}), [2] (${link}?again)`);
+  const bubble = page.locator(".bubble-user").last();
+  await expect(bubble).toContainText("caf80eb7");
+  const fits = await bubble.evaluate((el) => {
+    const own = el.getBoundingClientRect();
+    const column = (el.parentElement?.parentElement ?? el).getBoundingClientRect();
+    return { inside: own.left >= column.left - 1 && own.right <= column.right + 1, clipped: el.scrollWidth > el.clientWidth + 1 };
+  });
+  expect(fits).toEqual({ inside: true, clipped: false });
+});
+
 test("long user pastes clamp with a more…/less… toggle", async ({ page }) => {
   // About 2,400 characters, with a mark at its end.
   const end = "END-OF-PASTE-MARKER";

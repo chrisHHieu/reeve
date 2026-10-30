@@ -18,6 +18,7 @@ from harness.session.session_log import SessionLog
 from harness.tools import ToolRegistry
 
 from summary_fixtures import valid_summary
+from harness.context.compaction import part as _part, render_parts as _render_parts
 
 SUMMARY = valid_summary("keep building the report")
 
@@ -469,9 +470,9 @@ def test_an_estimate_over_the_trigger_compacts_before_the_request_and_the_next_r
     assert not _of(events, EventType.ERROR) and engine.compaction_state is not None
     assert provider.summary_calls[0]["model"] == "gpt-5.5"  # the conversation's own model writes it
     # The summary is shown to the person (display only), on the event and on the saved notice.
-    assert compacted.data["summary"] == SUMMARY
+    assert compacted.data["summary"] == _render_parts([_part(SUMMARY)])
     notices = [m for m in engine.messages if m.get("role") == "notice" and m.get("kind") == "compacted"]
-    assert notices and notices[0].get("summary") == SUMMARY
+    assert notices and notices[0].get("summary") == _render_parts([_part(SUMMARY)])
     # What is sent: the system prompt, then the block in place of the old turns, which lists the
     # person's own messages; the stored transcript still holds every turn.
     sent = engine._outbound_messages()
@@ -690,17 +691,17 @@ def test_a_provider_that_under_reports_the_prompt_is_not_believed(tmp_path):
     engine._record_context_measure(1_000)
     assert engine._last_context_tokens == 1_000  # nothing to contradict it yet
 
-    engine.messages.extend(long_history(turns=4, bulk=8_000)[1:])  # thousands appended
+    engine.messages.extend(long_history(turns=4, bulk=24_000)[1:])  # tens of thousands appended
     honest = C.estimate_tokens(engine.messages)
     engine._record_context_measure(1_000 + honest)  # a count that moved: believed
     assert engine._usage_unreliable is False
 
-    engine.messages.extend(long_history(turns=4, bulk=8_000)[1:])
+    engine.messages.extend(long_history(turns=4, bulk=24_000)[1:])
     engine._record_context_measure(1_000 + honest)  # did not move: partial
     assert engine._usage_unreliable is True
     assert engine._last_context_tokens is None
     assert engine._context_signal() >= C.estimate_tokens(engine.messages) * 0.9
-    engine._record_context_measure(50)  # and it stays disbelieved for the session
+    engine._record_context_measure(50)  # and it stays disbelieved while its count does not follow
     assert engine._last_context_tokens is None
 
 
@@ -713,11 +714,11 @@ def test_display_only_reasoning_is_not_counted_as_appended_prompt(tmp_path):
     provider = CompactingProvider([AssistantTurn(text="done", finish_reason="stop")])
     engine = make_engine(tmp_path, provider, messages=long_history(turns=2, bulk=100), window=10_000_000)
     engine._record_context_measure(1_000)
-    engine.messages.append(
-        {"role": "assistant", "content": "short answer", "reasoning": "thinking " * 5_000}
+    engine.messages.append(  # ~45k tokens if it were priced: past the evidence the check needs
+        {"role": "assistant", "content": "short answer", "reasoning": "thinking " * 20_000}
     )
     engine.messages.append({"role": "user", "content": "next"})
-    sent_growth = C.estimate_tokens(engine._outbound_messages()) - engine._measured_view_tokens
+    sent_growth = C.estimate_tokens(engine._outbound_messages()) + engine._tool_schema_tokens() - engine._usage_anchor[1]
     engine._record_context_measure(1_000 + sent_growth)  # priced what was actually sent
     assert engine._usage_unreliable is False
 

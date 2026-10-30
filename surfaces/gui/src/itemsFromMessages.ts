@@ -159,8 +159,10 @@ function noticeItem(m: ConversationMessage): Item | null {
       return restartNotice(m as unknown as Record<string, unknown>);
     case "job_stopped":
       return jobStoppedNotice(m as unknown as Record<string, unknown>);
+    // Said as what happened and not as a fault: "Interrupted." was read as a crash (owner,
+    // 2026-10-26). Not "Stopped by you": a parent agent can stop its own subagent.
     case "interrupted":
-      return { kind: "notice", tone: "warn", text: "Interrupted." };
+      return { kind: "notice", tone: "warn", text: "Stopped." };
     // Not retriable: running the turn again cannot start a server.
     case "mcp_error":
       return mcpNoticeItem(m);

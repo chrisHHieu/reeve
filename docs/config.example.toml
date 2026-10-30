@@ -196,6 +196,10 @@ worktree_isolation = false
 # context_budget_line = true  # a factual "context: ~Nk of ~Mk tokens before compaction"
 #                              # line, stamped at the turn start once per 10% band. No
 #                              # instruction rides it; it is context awareness only.
+# context_ledger = false       # a short <context-ledger> note every few steps once enough
+#                              # could be folded: the total, what a fold would replace, and
+#                              # the heaviest results in view with their age.
+#                              # Off until its ablation says it pays.
 # prune_after_idle_seconds = 900 # opportunistic prune of aged tool results while the
 #                              # prompt cache is ALREADY cold (a rewrite mid-prompt would
 #                              # otherwise cost the next request its cache read). UNSET =

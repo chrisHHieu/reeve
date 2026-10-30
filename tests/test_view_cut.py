@@ -53,7 +53,7 @@ def test_a_file_read_before_the_cut_is_out_of_view_and_one_in_the_kept_tail_is_n
 
     rule, reason = observed.blame("old.py")
     assert rule == RULE_OUT_OF_VIEW
-    assert "no longer in your context" in reason and "Read it again" in reason
+    assert "no longer in your context" in reason and "Read the whole file first" in reason
     assert observed.blame("recent.py") == ("", "")
     # Never read is still its own rule, and creating is still free.
     assert observed.blame("unread.py")[0] == RULE_NEVER_READ

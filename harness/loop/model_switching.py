@@ -26,10 +26,9 @@ class ModelSwitchMixin:
         # the local estimate sat at 89k, because the last provider count came from the previous
         # model. Dropped, the signal falls back to a fresh estimate for the new model until its
         # first usage report calibrates it.
-        self._last_context_tokens = None
+        self._forget_context_measure(route_changed=True)
         self._context_measured_at = len(self.messages)
         self._estimate_bias = None
-        self._measured_view_tokens = None
         # The thinking patch belongs to a model. A level the new model has no body for is dropped,
         # and so is one its catalogue does not list: a "medium" carried onto a model offering
         # low and high was still sent, and the picker showed a level the new model has no button

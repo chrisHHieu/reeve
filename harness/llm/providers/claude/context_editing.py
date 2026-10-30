@@ -112,24 +112,37 @@ def is_rejection(exc: Exception) -> bool:
     )
 
 
-def log_applied(source: Any) -> None:
-    """Say what the server cleared, when the reply reports it. This is the number the feature
-    is judged by: prompt size and cache hits on either side of it."""
+#: An applied edit's counts, and the names they go by on `AssistantTurn.context_cleared`.
+_CLEARED = {
+    "cleared_input_tokens": "input_tokens",
+    "cleared_tool_uses": "tool_uses",
+    "cleared_thinking_turns": "thinking_turns",
+}
+
+
+def cleared(source: Any) -> Optional[dict[str, int]]:
+    """What the server cleared from this request, summed over its applied edits, or None.
+
+    The reply's `usage` is the prompt after the clearing, so the request as sent is that plus
+    `input_tokens` here. This was once only a process log line, and the engine read the
+    smaller count as a provider under-reporting: the session of 2026-10-30 had about 34k cleared per
+    request and its context priced at twice what the model read."""
     payload = getattr(source, "context_management", None)
+    if payload is None and isinstance(source, dict):
+        payload = source.get("context_management")
     if payload is None:
-        return
+        return None
     edits = getattr(payload, "applied_edits", None)
     if edits is None and isinstance(payload, dict):
         edits = payload.get("applied_edits")
+    total: dict[str, int] = {}
     for edit in edits or []:
-        if isinstance(edit, dict):
-            cleared, tokens = edit.get("cleared_tool_uses"), edit.get("cleared_input_tokens")
-        else:
-            cleared = getattr(edit, "cleared_tool_uses", None)
-            tokens = getattr(edit, "cleared_input_tokens", None)
-        if cleared or tokens:
-            logger.info(
-                "context editing cleared %s tool uses / %s input tokens from the prompt",
-                "?" if cleared is None else cleared,
-                "?" if tokens is None else tokens,
-            )
+        get = edit.get if isinstance(edit, dict) else (lambda key, e=edit: getattr(e, key, None))
+        for field, name in _CLEARED.items():
+            try:
+                value = int(get(field) or 0)
+            except (TypeError, ValueError):
+                continue
+            if value > 0:
+                total[name] = total.get(name, 0) + value
+    return total or None

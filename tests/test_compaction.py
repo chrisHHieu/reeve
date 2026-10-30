@@ -363,8 +363,9 @@ def test_repeated_compaction_adds_a_part_and_keeps_the_first_as_written():
     # The second call is shown the first part as context, and told it is kept as it is.
     asked = fake.calls[1]["messages"][1]["content"]
     assert "kept as it is" in asked and "ONLY the part for the conversation after it" in asked
-    assert [p["text"] for p in second.parts] == [first.summary_text, valid_summary("the second stretch")]
-    assert second.summary_text.startswith("### Part 1 of 2 (oldest)\n" + first.summary_text)
+    assert [p["text"] for p in second.parts] == [first.parts[0]["text"], valid_summary("the second stretch")]
+    assert second.summary_text.startswith(first.summary_text)  # the first part, byte for byte
+    assert first.summary_text.startswith("### Part 1\n")
     block = compacted_block(second)
     assert "oldest first" in block and "`fetch_record` renamed" in block
     # and the person's own messages add up from one compaction to the next

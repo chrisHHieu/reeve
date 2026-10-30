@@ -2014,8 +2014,11 @@ export function Transcript({ items, running, onRetry, onOpenConnectors, onReveal
                 {/* neutral bubble: the theme's soft chrome tint says "a surface",
                     direction says "you" — no accent edge, no fill trick, both themes read the
                     same quiet gray. */}
+                {/* A pasted link has no space to wrap at: without `overflow-wrap: anywhere` it
+                    widened the bubble past its column, and, the bubble being aligned right, the
+                    overflow went left and was cut (a paste of cited URLs, 2026-10-29). */}
                 {(item.text || item.command) && (
-                  <div className="bubble-user px-3.5 py-2.5 rounded-[14px_14px_4px_14px] bg-chromeHover text-ink text-[14px] leading-relaxed whitespace-pre-wrap">
+                  <div className="bubble-user max-w-full min-w-0 [overflow-wrap:anywhere] px-3.5 py-2.5 rounded-[14px_14px_4px_14px] bg-chromeHover text-ink text-[14px] leading-relaxed whitespace-pre-wrap">
                     {item.command ? <CommandBubble item={item} /> : <UserText text={item.text} />}
                   </div>
                 )}
