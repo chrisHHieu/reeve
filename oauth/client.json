@@ -1,0 +1,12 @@
+{
+  "client_id": "https://chrishhieu.github.io/reeve/oauth/client.json",
+  "client_name": "Reeve",
+  "client_uri": "https://github.com/chrisHHieu/reeve",
+  "redirect_uris": [
+    "http://127.0.0.1/mcp/oauth/callback",
+    "http://127.0.0.1:8765/mcp/oauth/callback"
+  ],
+  "grant_types": ["authorization_code", "refresh_token"],
+  "response_types": ["code"],
+  "token_endpoint_auth_method": "none"
+}
